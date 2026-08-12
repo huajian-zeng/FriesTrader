@@ -1,52 +1,119 @@
 # Phase A — Screening & Thesis Only (Automated Daily Task)
 
 Automated subset of this pipeline (see `README.md`), run every weekday
-4:30pm Central as a cloud routine.
+4:30pm Central as a scheduled routine.
 
 Performs **ONLY Steps 1–3**. **NEVER** Step 4 (re-verify), 5 (risk
-enforcement), 6 (dry run/order review), or 7 (`trade_log.jsonl`) — those
-belong to Phase B. Order tools (`review_equity_order`,
-`place_equity_order`, cancel) are hard-blocked at the connector level; do
+enforcement), 6 (order instructions), or 7 (`trade_log.jsonl`) — those
+belong to Phase B. Order tools (`create_order_instruction`,
+`delete_order_instruction`) are hard-blocked at the connector level; do
 not attempt them anyway.
+
+## Broker access — the IBKR connector
+
+All market and account data comes from the IBKR MCP connector. Two
+mechanics differ from every other MCP you may have used, and both bite
+immediately:
+
+**1. Everything is keyed by `contract_id`, not by ticker.** Before any
+price call, resolve the symbol with `search_contracts`, then use the
+chosen row's `underlying_contract_id`. **Two conditions, both required:**
+
+1. `symbol` matches the ticker **exactly** — a live search for "AAPL"
+   also returns AAPU, AAPB, AAPD, AAPE, AAPW, AAPY and IOSX, and a
+   near-match is a different instrument, not a close-enough one.
+2. `country_code == "US"` — **exact symbol match alone is not enough.**
+   That same live search returned **four** rows whose symbol is exactly
+   "AAPL", on NASDAQ (US), MEXI (MX), EBS (CH) and TSE (CA, an
+   "APPLE INC-CDR"). Without the country filter, picking "the exact
+   match" can land on a Mexican listing or a Canadian depositary receipt.
+
+Resolve each symbol once per run and reuse the id; do not re-resolve per
+call. **If a symbol does not resolve to exactly one US exact match, drop
+it** and log
+`"reason": "no unique US contract match in search_contracts — excluded rather than guessing an instrument"`.
+Rows carrying an `issuer` instead of an `underlying_contract_id` are
+bonds; ignore them.
+
+**2. Response keys are hyphenated where request names are underscored.**
+Requesting `misc_statistics` returns `misc-statistics`; `avg_90d_usd_volume`
+returns `avg-90d-usd-volume`; `bid_ask` returns `bid-ask`. Read values
+from the hyphenated form. A lookup against the underscored name returns
+nothing, which looks exactly like missing data — and missing data has
+real consequences below, so do not confuse the two.
+
+If a call fails or returns nothing usable, log what failed and drop that
+candidate. Never substitute a value from a previous run, a plausible
+estimate, or your own knowledge for data a failed call didn't return.
 
 ## Step 1 — Build the watchlist
 
-Pull symbols from the Robinhood watchlist named `universe.watchlist_name`
-in `risk_rules.json` (read fresh each run — don't assume prior values or
-hardcode the name). Call `get_watchlists` to find its `list_id` by
-matching `display_name`, then `get_watchlist_items` on that `list_id` —
-ignore all other watchlists.
+Pull symbols from the IBKR watchlist named `universe.watchlist_name` in
+`risk_rules.json` (read fresh each run — don't assume prior values or
+hardcode the name). Call `get_watchlists` to find its id by matching the
+name, then `get_watchlist` on that id — ignore all other watchlists.
 
-**Supplementary market scan** (additive, not a replacement): call
-`run_scan` with `universe.supplementary_scan_id` — a saved Robinhood
-scanner (relative volume and market cap criteria, see
-`universe.supplementary_scan_note`) that surfaces genuinely notable
-movers from outside your watchlist, so candidate selection isn't limited
-to names you've personally added. Drop any scan result that's already on
-the watchlist (it's already a watchlist candidate, not a second one) or
-already a held position (always included regardless, per below). From
-what's left, take up to `universe.supplementary_scan_max_candidates` —
-the scan's own default ordering, no re-ranking needed — and mark each
-`"source": "market_scan"` on its `screened` line (watchlist-sourced and
-held candidates get `"source": "watchlist"`). This cap is **separate
-from and additive to** `watchlist_max_candidates` below — scan results
-never compete with watchlist candidates for the same slots.
+> **There is no supplementary market scan.** The Robinhood build ran a
+> saved relative-volume scan each cycle to surface movers from outside
+> the watchlist. The IBKR connector has no scanner — `search_investment_topics`
+> and `get_company_themes` are thematic browsing, not quantitative
+> screening. **Your watchlist is the entire candidate universe**, and this
+> pipeline can no longer discover anything you did not put in front of it.
+> Every `screened` line therefore carries `"source": "watchlist"`.
+> See `universe.no_market_scan_note`.
 
-Dedupe the combined (watchlist + capped scan) list, filter via
-`get_equity_fundamentals` against `risk_rules.json`'s current `universe`
-block, and cap the **watchlist-sourced, non-held** portion at
-`universe.watchlist_max_candidates` — the scan's own separate cap above
-already bounds its own contribution, so this cap only ever applies to
-watchlist candidates.
+**`get_watchlist` already returns the contract id.** Each instrument comes
+back as `{"contract_id_ex": "88819736", "contract_description": "NBIS"}`,
+where `contract_description` is the ticker and `contract_id_ex` is the id
+`get_price_snapshot` and `get_price_history` need — no `search_contracts`
+round-trip is required to resolve it.
 
-Pull current prices for the capped candidate list via `get_equity_quotes`
-(batched into one call), fresh every run. Use `last_trade_price` as
-`current_price` in Steps 2–3.
+You still need **one `search_contracts` call per candidate**, but only to
+obtain the instrument's descriptive name for the leveraged/inverse filter
+below: the watchlist gives the ticker, never the name. Budget for that —
+it is one extra call per candidate, every cycle. Apply the exact-symbol
+and `country_code == "US"` rules to pick which returned row's
+`description` to read.
 
-`universe.max_market_cap_usd` is a ceiling, not just a floor — exclude if
-market cap exceeds it, regardless of how strong the candidate otherwise
-looks. Log as
-`"market cap $<X> exceeds universe.max_market_cap_usd ($<threshold>) — excluded per universe filters"`.
+Then pull a snapshot for the whole candidate list with
+`get_price_snapshot`, requesting at least:
+
+```
+market_data_names: ["last", "bid_ask", "prior_close", "misc_statistics", "avg_90d_usd_volume"]
+```
+
+`misc-statistics` carries the 13/26/52-week highs and lows under the keys
+`high_13w`, `high_26w`, `high_52w`, `low_13w`, `low_26w`, `low_52w`, plus
+`open_52w`. **Not** `high_52_weeks`/`low_52_weeks` — that is what the
+Robinhood build called them and what a reasonable guess would produce;
+the real names were verified against a live response.
+`avg-90d-usd-volume` is the liquidity figure the universe filter uses,
+and it arrives nested as `{"volume": <number>}`.
+
+Use `last.price` as `current_price` in Steps 2–3. **`prior-close` cannot
+be relied on as a fallback** — a live check returned it as an empty
+object `{}` even while `last` was populated. If `last.price` is null and
+`prior-close` is empty, take the final `close` from this candidate's Step
+2 `get_price_history` bars instead; if that is unavailable too, drop the
+candidate rather than screening it on no price at all.
+
+Filter the list against `risk_rules.json`'s current `universe` block, and
+cap the **non-held** portion at `universe.watchlist_max_candidates`.
+
+**Liquidity floor.** Exclude if `avg-90d-usd-volume` is below
+`universe.min_avg_90d_usd_volume`. Log as
+`"average 90d dollar volume $<X> is below universe.min_avg_90d_usd_volume ($<threshold>) — excluded per universe filters"`.
+If the field is missing, exclude rather than admit unfiltered — log
+`"90d dollar volume unavailable — excluded, cannot enforce the liquidity floor"`.
+
+> **There is no market-cap filter any more.** The Robinhood build screened
+> on a 2B floor and a 50B ceiling. The IBKR connector exposes no market
+> cap at all. The liquidity floor above is a genuine substitute for the
+> floor, but **nothing substitutes for the ceiling** — if you don't want
+> mega-caps traded, keep them off the watchlist. See
+> `universe.no_market_cap_filter_note`. Do not attempt to supply a market
+> cap from your own knowledge; a screening threshold enforced against a
+> remembered number is not a mechanical filter.
 
 `exclude`'s `"penny_stocks"` entry is mechanical, not a judgment call:
 exclude if current price < `universe.penny_stock_price_threshold_usd`,
@@ -54,23 +121,43 @@ regardless of how the stock is otherwise trading. Log the reason as
 `"penny stock (price $<X>, under $<threshold>) — excluded per universe.exclude: penny_stocks"`.
 
 `exclude`'s `"leveraged_etfs"`/`"inverse_etfs"` entries are also
-mechanical: exclude if Step 1's `get_equity_fundamentals` `description`
-field contains "leveraged" or "inverse" (case-insensitive substring
-match) — fund providers state this directly (e.g. TQQQ: "provides 3x
-leveraged exposure...", SQQQ: "provides (-3x) inverse exposure..."), no
-judgment about current risk needed. Log the reason as
-`"leveraged/inverse ETF (description: \"<matched phrase>\") — excluded per universe.exclude: <leveraged_etfs|inverse_etfs>"`.
+mechanical, but weaker than the Robinhood original — see
+`universe.leveraged_inverse_note`. Exclude if the row's `description`
+from `search_contracts`, uppercased, contains any entry in
+`universe.leveraged_inverse_name_keywords` and does **not** contain any
+entry in `universe.leveraged_inverse_name_exceptions`. The keyword list
+is multiplier-based (`2X`, `3X`, `LEVERAGE`, `ULTRAPRO`, …) rather than
+word-based, because the connector exposes no `stock_type` field: with no
+way to tell an ETF from an operating company, bare words like `ULTRA` or
+`BULL` would exclude Ultra Clean Holdings and Bullfrog AI. Log as
+`"leveraged/inverse ETF (name: \"<name>\", matched \"<keyword>\") — excluded per universe.exclude: <leveraged_etfs|inverse_etfs>"`.
+This is a name-pattern heuristic standing in for a prospectus description
+the connector doesn't expose. It is deliberately biased toward
+over-exclusion, and a false positive is an acceptable cost. **Do not
+"correct" it with your own knowledge of what a fund actually holds, in
+either direction** — not to rescue a name it caught, and not to exclude
+one it missed. The real defence is not putting leveraged products on the
+watchlist.
 
 **Always ensure every held position is in the final list**
-(`get_equity_positions`, account_number from `risk_rules.json`) — if one
-already made it through on its own (e.g. it's also on the watchlist),
-leave it as-is, don't add a duplicate. `watchlist_max_candidates` is a
-cap on **non-held** candidates only: exclude held positions from that
-count entirely before checking whether the cap was exceeded, so a held
-position can never occupy a slot or cause a non-held candidate to be
-dropped. A held position must stay eligible for a fresh thesis
-(including `exit_existing`) and never get silently dropped for being
-illiquid, small-cap, or off the list. Log as
+(`get_account_positions`) — if one already made it through on its own
+(e.g. it's also on the watchlist), leave it as-is, don't add a duplicate.
+**There is no way to confirm which account this is.** No connector
+endpoint returns an account identifier — `get_account_summary`,
+`get_account_positions`, `get_account_balances` and `get_account_trades`
+were all checked against live responses and none carries one, nor accepts
+an account parameter. `risk_rules.json`'s `account_number` is therefore a
+record for you, not something this phase can verify. Log the position
+count and held symbols as an `account_fingerprint` field on the run so a
+human reading the log would notice a swapped account; Phase B's Step 0
+carries the actual halt logic (`account_fingerprint` in
+`risk_rules.json`). Do not claim to have verified the account.
+`watchlist_max_candidates` is a cap on **non-held** candidates only:
+exclude held positions from that count entirely before checking whether
+the cap was exceeded, so a held position can never occupy a slot or cause
+a non-held candidate to be dropped. A held position must stay eligible
+for a fresh thesis (including `exit_existing`) and never get silently
+dropped for being illiquid or off the list. Log as
 `"stage": "screened", "passed_filters": true, "reason": "currently held — always included"`
 regardless of what the filters would have said.
 
@@ -79,55 +166,74 @@ Phase B's job. See Hard stop below.)
 
 ## Step 2 — Gather signals
 
-Pull ~60 days of price history per candidate (`get_equity_historicals`),
-called fresh for every candidate this run. Never reuse `close_60d_ago`,
-`latest_close`, or any other historicals-derived value from a prior
-run's `pending_proposals.jsonl` or `trade_log.jsonl`, even if today's
-figure looks unchanged from yesterday's — every number in `signal_check`
-must come from this run's own tool call. Whether it's worth a news
-search is mechanical, against `risk_rules.json`'s `signal_thresholds` —
-qualifies if it meets **any one** of these three (no extra tool calls
-needed):
+Pull ~60 days of daily price history per candidate with
+`get_price_history` (`security_type: "STK"`, `step: "ONE_DAY"`,
+`period: "THREE_MONTHS"`, `outside_rth: false`), called fresh for every
+candidate this run. Trim the returned bars to the ones inside the last
+**60 calendar days** before using them — `THREE_MONTHS` deliberately
+over-fetches so the 60-day window is complete after weekends and
+holidays, but the window itself must be 60 calendar days, not 60 bars
+(counting back 60 bars drifts to ~85-90 calendar days and overstates the
+move).
 
-1. **60-day price move**: `abs(latest_close - close_60d_ago) / close_60d_ago >= signal_thresholds.price_move_60d_pct`.
-   **"60 days" = 60 *calendar* days, not trading bars.** Get
-   `close_60d_ago` as the earliest bar's `close_price` when
-   `get_equity_historicals`'s `start_time` = today minus 60 calendar days
-   — don't pull a longer range and count back 60 bars (that drifts to
-   ~85-90 calendar days and overstates the move). If less than 60 days of
-   history exists (e.g. recent IPO), compute over the available window
-   and note it rather than skipping.
-2. **Volume spike**: `latest_volume / average_volume_30_days >= signal_thresholds.volume_spike_multiple`
-   (both from Step 1's `get_equity_fundamentals` call).
-3. **Near a 52-week extreme**: `(high_52_weeks - current_price) / high_52_weeks <= signal_thresholds.pct_from_52wk_extreme`
-   **or** `(current_price - low_52_weeks) / low_52_weeks <= signal_thresholds.pct_from_52wk_extreme`
-   (`high_52_weeks`/`low_52_weeks` from Step 1's `get_equity_fundamentals`
-   call, `current_price` from Step 1's `get_equity_quotes` call).
+Never reuse `close_60d_ago`, `latest_close`, or any other
+history-derived value from a prior run's `pending_proposals.jsonl` or
+`trade_log.jsonl`, even if today's figure looks unchanged from
+yesterday's — every number in `signal_check` must come from this run's
+own tool call.
 
-**Log the raw inputs behind every ratio, not just the ratio** (see
-`signal_check` format below) — otherwise it can't be sanity-checked
-without re-pulling data.
+**Do not compute the signal ratios yourself.** Pipe the trimmed bars into
+the script:
 
-If none apply, no search/thesis this run — log as `screened`-only.
-Qualifying candidates' searches stay within
+```
+echo '{"history": <the get_price_history response object, VERBATIM>,
+       "high_52_weeks": <misc-statistics.high_52w, or null>,
+       "low_52_weeks": <misc-statistics.low_52w, or null>,
+       "current_price": <from Step 1>}' \
+| python3 scripts/signal_check.py \
+    --price-move-threshold <signal_thresholds.price_move_60d_pct> \
+    --volume-spike-threshold <signal_thresholds.volume_spike_multiple> \
+    --pct-from-52wk-threshold <signal_thresholds.pct_from_52wk_extreme>
+```
+
+**Pass `get_price_history`'s response through untouched.** It returns
+COLUMNAR parallel arrays — `{"time": [...], "close": [...], "volume":
+[...], "high": [...], "low": [...]}` — not a list of bar objects, and the
+script transposes them itself. Do not hand-build a `bars` list from those
+arrays: pairing a close with the wrong index's volume is silent, produces
+a plausible-looking number, and is exactly the failure this avoids. The
+script refuses outright if the arrays disagree in length.
+
+Use the script's JSON output directly —
+`qualifies`, `triggered`, `signal_check` (log this string verbatim),
+`magnitude_score`, `unevaluable`.
+
+The script exists because the connector has no average-volume field: the
+Robinhood build read `average_volume_30_days` straight off
+`get_equity_fundamentals`, whereas here the baseline has to be computed
+from the bars, and this project keeps arithmetic out of the model. It
+evaluates the same three criteria as before — 60-day price move, volume
+spike against the prior 30 bars (excluding the latest bar from its own
+baseline), and distance to the nearer 52-week extreme — and qualifies a
+candidate if **any one** is met.
+
+A criterion whose inputs are missing lands in `unevaluable` and simply
+doesn't qualify. It is never a reason to substitute a value, and never
+suppresses the other two. If all three are unevaluable, treat the
+candidate as no-signal.
+
+If `qualifies` is false, no search/thesis this run — log as
+`screened`-only. Qualifying candidates' searches stay within
 `cadence.news_search_budget_per_cycle` (per run, not per stock; held
-positions draw from their own separate budget above, not this one).
+positions draw from their own separate budget below, not this one).
 
-**If more candidates qualify than the budget allows**, prioritize by how
-far each one exceeded the specific threshold it tripped — not conviction
-or `risk_flags` (those don't exist yet; they're outputs of the search
-this budget gates, not inputs to it). Compute a **magnitude score** per
-qualifying candidate:
-- Price move: `actual_price_move_60d_pct / price_move_60d_pct` (threshold).
-- Volume spike: `actual_volume_spike / volume_spike_multiple` (threshold).
-- 52-week extreme: `pct_from_52wk_extreme` (threshold) `/ actual_pct_from_52wk_extreme`
-  (whichever of the two 52-week-extreme ratios triggered) — inverted,
-  since smaller = closer to the extreme = more notable.
-If a candidate qualifies under more than one criterion, use its
-**highest** score. Process qualifying candidates in descending score
-order, spending the budget as you go. Any candidate that would push
-spend past `cadence.news_search_budget_per_cycle` is skipped this
-cycle — log
+**If more candidates qualify than the budget allows**, prioritize by the
+script's `magnitude_score` — how far each one exceeded the specific
+threshold it tripped, not conviction or `risk_flags` (those don't exist
+yet; they're outputs of the search this budget gates, not inputs to it).
+Process qualifying candidates in descending `magnitude_score` order,
+spending the budget as you go. Any candidate that would push spend past
+`cadence.news_search_budget_per_cycle` is skipped this cycle — log
 `"stage": "screened", "passed_filters": true, "reason": "news search budget exhausted this cycle (<N> of <cadence.news_search_budget_per_cycle> already spent on higher-magnitude signals) — no thesis this run"`.
 It remains a normal candidate next cycle, re-screened fresh (no
 carryover priority).
@@ -138,11 +244,14 @@ Run one targeted news search per held position (separate budget from
 `max_concurrent_positions`, same pattern as Phase B's Monday weekend-gap
 searches) and produce a thesis every run — this is what makes
 `exit_existing` reachable, since a slow deterioration with no sharp
-signal would otherwise go unnoticed. This search must also cover
-whether any active lawsuit/regulatory investigation naming the company
-has a scheduled ruling, hearing, trial date, or compliance deadline in
-the next ~90 days (the `active_litigation` risk_flags criterion below)
-— don't rely on it surfacing incidentally from a catalyst-only query.
+signal would otherwise go unnoticed. This matters more here than it did
+on Robinhood: with no market scan, a deteriorating held position is one
+of the few things this pipeline can still catch on its own. This search
+must also cover whether any active lawsuit/regulatory investigation
+naming the company has a scheduled ruling, hearing, trial date, or
+compliance deadline in the next ~90 days (the `active_litigation`
+risk_flags criterion below) — don't rely on it surfacing incidentally
+from a catalyst-only query.
 
 ## Step 3 — Synthesize thesis
 
@@ -216,12 +325,12 @@ Empty array (`[]`) if none apply. Used by Phase B (Step 5) as the
 primary within-tier tie-break, ahead of `pct_below_52wk_high`.
 
 **Include `pct_below_52wk_high`** for every `direction: "long"` candidate:
-`(high_52_weeks - current_price) / high_52_weeks` (e.g. `0.15`).
-`high_52_weeks` from Step 1's `get_equity_fundamentals` call,
-`current_price` from Step 1's `get_equity_quotes` call. Used by
-Phase B (Step 5) as the secondary within-tier tie-break, after
-`risk_flags` — a disclosed "room in the setup" proxy, not a fair-value
-calc. Omit for `avoid`/`exit_existing`.
+`(high_52w - current_price) / high_52w` (e.g. `0.15`), taking
+`high_52w` from Step 1's `misc-statistics` and `current_price` from
+Step 1's snapshot. Used by Phase B (Step 5) as the secondary within-tier
+tie-break, after `risk_flags` — a disclosed "room in the setup" proxy,
+not a fair-value calc. Omit for `avoid`/`exit_existing`, and **omit
+rather than estimate** if `high_52w` was unavailable.
 
 **Include a `sources` field** listing outlet name + URL for every search
 result that informed this thesis (e.g.
@@ -246,18 +355,12 @@ never used for idempotency or other logic.
 
 Write:
 - One `"stage": "screened"` line per candidate (`passed_filters`,
-  `source` (`"watchlist"` or `"market_scan"`), `avg_volume`,
-  `market_cap`, `reason` if rejected — shape matches
-  `trade_log_template.jsonl`), plus `"signal_check"` noting which Step 2
-  threshold(s) triggered, **each ratio paired with its raw inputs**
-  (examples below) so the arithmetic is checkable — raw numbers must be
-  this run's actual pulled values, never back-computed to fit a
-  percentage:
-  - `"price_move_60d: 0.2925 (close_60d_ago: 424.10 -> latest_close: 548.13)"`
-  - `"volume_spike: 2.3x (latest_volume: 68000000 / avg_volume_30d: 29421634)"`
-  - `"near_52wk_high: 0.02 (current_price: 314.86 / high_52_weeks: 321.00)"`
-  - `"none"` if it didn't qualify for a thesis this run — no raw values
-    needed in that case.
+  `source` (always `"watchlist"`), `avg_90d_usd_volume`, `contract_id`,
+  `reason` if rejected — shape matches `trade_log_template.jsonl`), plus
+  `"signal_check"` copied **verbatim from `signal_check.py`'s output**,
+  which already pairs each ratio with its raw inputs so the arithmetic is
+  checkable. Do not reformat, round, or re-derive that string, and log
+  `"none"` when the script returns it.
 - One `"stage": "thesis"` line per flagged candidate (shape matches
   `trade_log_template.jsonl`), plus `pct_below_52wk_high` for `long`
   candidates (Step 3).
@@ -290,7 +393,11 @@ thesis lines.
 
 ## Hard stop
 
-Do not call `review_equity_order`, `place_equity_order`, or any
-cancel/order tool, or check `execution.mode`. `get_equity_positions` is
-for Step 1's candidate list only — no stop-loss/drawdown computation
-here; all risk enforcement is Phase B's job.
+Do not call `create_order_instruction`, `delete_order_instruction`, or any
+watchlist/alert **write** tool (`create_watchlist`, `edit_watchlist`,
+`delete_watchlist`, `create_alert`, `update_alert`, `set_alert_status`,
+`delete_alert`), and do not check `execution.mode`. `get_watchlist` is
+read-only and expected; editing the watchlist is the human's job, not
+this pipeline's. `get_account_positions` is for Step 1's candidate list
+only — no stop-loss/drawdown computation here; all risk enforcement is
+Phase B's job.

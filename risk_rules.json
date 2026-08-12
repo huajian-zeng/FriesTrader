@@ -1,8 +1,20 @@
 {
-  "_comment": "These are hard numeric limits. Claude's reasoning/thesis step may NEVER override these values. Any proposed trade that violates a rule here must be rejected before it reaches review_equity_order, with no exceptions regardless of how strong the thesis sounds.",
+  "_comment": "These are hard numeric limits. Claude's reasoning/thesis step may NEVER override these values. Any proposed trade that violates a rule here must be rejected before an order instruction is ever created, with no exceptions regardless of how strong the thesis sounds.",
 
-  "account_number": "YOUR_ACCOUNT_NUMBER_HERE",
-  "starting_capital_usd": 500.00,
+  "account_number": "YOUR_IBKR_ACCOUNT_ID_HERE",
+  "account_number_note": "FOR YOUR OWN RECORDS ONLY -- it CANNOT be verified. Checked against live responses: get_account_summary, get_account_positions, get_account_balances and get_account_trades all return no account identifier of any kind, and none of them accepts an account parameter. The connector talks to whichever account its OAuth grant points at, and nothing in this pipeline can tell which one that is. Watchlists are no help either -- they are user-level, so they stay identical across an account switch. account_fingerprint below is the substitute.",
+
+  "account_fingerprint": {
+    "enabled": true,
+    "expected_net_liquidation_usd": [400, 900],
+    "note": "Weak stand-in for the account check that account_number cannot perform. Phase B's Step 0 pulls get_account_summary and halts if net_liquidation falls outside this range, and logs the fingerprint (net liquidation, position count, held symbols) every cycle so a human reading the log sees immediately if the connected account changed. Set the range to a band around your real balance -- wide enough not to trip on ordinary P&L, narrow enough to catch a different account. It CANNOT distinguish two accounts of similar size, so treat it as a tripwire, not a guarantee. Widen to [0, 1000000] to effectively disable the halt while keeping the logging.",
+    "expected_symbols": [],
+    "expected_symbols_note": "Optional. If non-empty, Phase B also halts when none of these symbols is held, which catches an account swap far more sharply than a value band. Leave empty on an account whose holdings turn over completely."
+  },
+
+  "starting_capital_usd": 542.44,
+  "starting_capital_note": "Set from the live account's net_liquidation on 2026-08-12, AFTER the AED->USD conversion settled. This is the denominator for both loss limits and, via max_position_pct_of_account, the basis of every position size -- a value that doesn't match the account computes every sizing and every limit against a fiction. Re-set it after any deposit or withdrawal; it does NOT track the balance automatically, and it is deliberately a fixed baseline rather than a live value, so the loss limits measure drawdown from where you started rather than sliding down with the account.",
+  "base_currency_note": "This account was funded in AED and converted to USD on 2026-08-12 (AED 2000 -> USD 542.00, about $2.08 in FX commission, matching IBKR's $2 per-order minimum). US equities settle in USD, so if USD cash ever returns to 0 while positions are open, IBKR is either auto-converting per trade or lending you dollars against non-USD collateral at margin rates. THE PIPELINE DOES NOT CHECK THIS -- create_order_instruction supports STK/FUT/OPT/FOP only, never CASH pairs, so conversion is always a manual step. Check get_account_balances after any new deposit.",
 
   "position_sizing": {
     "max_position_pct_of_account": 0.20,
@@ -10,7 +22,8 @@
     "min_cash_buffer_pct": 0.10,
     "min_top_up_usd": 5.00,
     "min_top_up_pct_of_target": 0.10,
-    "min_top_up_note": "A top-up only fires if the computed buy amount clears max($1.00 broker minimum, min_top_up_usd, min_top_up_pct_of_target x target_size for that candidate's conviction tier). Below that, skip without calling review_equity_order -- a top-up smaller than this doesn't move the position meaningfully, and letting headroom shrink toward zero every cycle otherwise generates a long tail of dust-sized orders as the position converges on target. Applies to top-ups only, never to new-entry sizing."
+    "min_top_up_note": "A top-up only fires if the computed buy amount clears max(broker floor, min_top_up_usd, min_top_up_pct_of_target x target_size for that candidate's conviction tier). Below that, skip without creating an instruction -- a top-up smaller than this doesn't move the position meaningfully, and letting headroom shrink toward zero every cycle otherwise generates a long tail of dust-sized orders as the position converges on target. Applies to top-ups only, never to new-entry sizing. On IBKR the 'broker floor' is the price of one whole share, or $1.00 in fractional mode -- not Robinhood's flat $1.00. scripts/dollars_to_shares.py enforces it.",
+    "commission_note": "IBKR charges per order, unlike Robinhood's $0. MEASURED, not quoted from a pricing page: every order in a live account's get_account_trades history came back at approximately $1.00 (1.00003, 1.023834, 1.0246...), with partial fills of the same order carrying only fractions of a cent. So budget ~$1.00 PER ORDER. KNOWN AND ACCEPTED at the current account size: a full-size $109 position runs buy + three take_profit tiers + a final exit = 5 orders = $5.00 = 4.6% of the position, and four positions through a full round is ~$20 = 3.7% of the account, before any market move. That drag was weighed against cutting the tiers to one (cheaper, but discards the staged profit-locking this account was designed around) and against doubling position size to halve the ratio (cheaper, but 40% concentration and half the sample size), and the decision was to keep the original risk design intact and treat the cost as the price of validating the pipeline on a small account. Revisit once the balance is large enough that the ratio stops mattering -- with real fill data in hand rather than estimates."
   },
 
   "stop_loss": {
@@ -21,7 +34,8 @@
     "min_stop_pct": 0.05,
     "max_stop_pct": 0.15,
     "fallback_stop_pct": 0.07,
-    "note": "mode is 'fixed' or 'volatility_scaled' -- toggle only. 'fixed' uses the flat hard_stop_pct for every symbol. 'volatility_scaled': stop_pct per symbol = clamp(volatility_stdev_multiplier * stdev of daily close-to-close returns over volatility_lookback_trading_days, min_stop_pct, max_stop_pct), recomputed fresh from get_equity_historicals each cycle; falls back to fallback_stop_pct if historicals are unavailable or the symbol has fewer than 10 daily bars. Every open position must have this stop checked on every cycle, independent of any new thesis about the stock. A good new narrative does not cancel a stop-loss."
+    "note": "mode is 'fixed' or 'volatility_scaled' -- toggle only. 'fixed' uses the flat hard_stop_pct for every symbol. 'volatility_scaled': stop_pct per symbol = clamp(volatility_stdev_multiplier * stdev of daily close-to-close returns over volatility_lookback_trading_days, min_stop_pct, max_stop_pct), recomputed fresh from get_price_history each cycle; falls back to fallback_stop_pct if history is unavailable or the symbol has fewer than 10 daily bars. Every open position must have this stop checked on every cycle, independent of any new thesis about the stock. A good new narrative does not cancel a stop-loss.",
+    "no_intraday_protection_note": "IMPORTANT LIMITATION of the connector route. create_order_instruction supports MARKET and LIMIT only -- there is NO stop order type -- so no resting stop can sit at the broker. This stop is therefore evaluated exactly once per day, in Phase B, and even when it triggers the resulting sell is only an INSTRUCTION that waits for your manual approval. A position can gap down 20% at 10am and stay held until you next open the IBKR app. Size positions with that in mind; it is the single largest risk difference between this route and a direct TWS API deployment."
   },
 
   "take_profit": {
@@ -30,38 +44,54 @@
       {"gain_pct": 0.30, "sell_fraction_of_position": 0.25},
       {"gain_pct": 0.50, "sell_fraction_of_position": 0.25}
     ],
-    "note": "Tiered partial take-profit, not a single full-exit threshold. Every open position must have this checked on every cycle, independent of any new thesis about the stock — this account is short-term oriented, not buy-and-hold. A good new narrative does not cancel a take-profit tier any more than it cancels a stop-loss. Each tier fires once (per holding period, i.e. since the position last closed to zero) when gain first reaches it, selling sell_fraction_of_position of the position's quantity at that moment — see PHASE_B_TASK.md Step 5 for the exact mechanics. After all three tiers have fired, the remaining quantity is held long indefinitely; only the stop-loss still applies to it."
+    "note": "Tiered partial take-profit, not a single full-exit threshold. Every open position must have this checked on every cycle, independent of any new thesis about the stock — this account is short-term oriented, not buy-and-hold. A good new narrative does not cancel a take-profit tier any more than it cancels a stop-loss. Each tier fires once (per holding period, i.e. since the position last closed to zero) when gain first reaches it, selling sell_fraction_of_position of the position's quantity at that moment — see PHASE_B_TASK.md Step 5 for the exact mechanics. After all three tiers have fired, the remaining quantity is held long indefinitely; only the stop-loss still applies to it.",
+    "tier_fires_once_note": "A tier is considered fired when its INSTRUCTION is created, not when you approve it. If you decline an instruction in the IBKR app, that tier will not re-fire on its own -- see execution.declined_instruction_note."
   },
 
   "loss_limits": {
     "daily_loss_limit_pct_of_account": 0.05,
-    "weekly_loss_limit_pct_of_account": 0.10
+    "weekly_loss_limit_pct_of_account": 0.10,
+    "note": "Denominated against starting_capital_usd. Source is get_account_trades, which DOES return a per-trade realized_pnl field despite that field being absent from the connector's own tool description -- verified against live responses. scripts/realized_pnl.py sums it into daily and weekly totals. Because the broker is the source rather than this pipeline's log, sells you make by hand in the IBKR app count toward these limits too, which is correct: a loss is a loss regardless of who initiated it.",
+    "timezone_note": "get_account_trades stamps trade_time in UTC while these limits are defined on America/Chicago trading days. An extended-hours fill at 01:30Z is 20:30 the PREVIOUS Chicago day, so realized_pnl.py converts before bucketing. Do not bucket on the raw UTC date."
   },
 
   "wash_sale_avoidance": {
     "enabled": true,
-    "note": "Toggle only -- set enabled to false to turn this guard off entirely; no other change needed. IRS wash-sale rule applies per taxpayer across ALL accounts, not per account, so this checks linked_accounts, not just account_number. Blocks BUYS only (new entries and top-ups) -- never blocks a stop_loss/take_profit/exit_existing sell, since risk management must never bend to a tax outcome; those sells are instead logged with a wash-sale flag if one applies, for the human's own tax tracking. This cannot prevent a wash sale caused by a purchase made LATER in another linked account after an agentic-account sell -- those accounts are outside this pipeline's control; only the human can avoid that side.",
+    "note": "Toggle only -- set enabled to false to turn this guard off entirely; no other change needed. IRS wash-sale rule applies per taxpayer across ALL accounts, not per account, so this checks linked_accounts, not just account_number. Blocks BUYS only (new entries and top-ups) -- never blocks a stop_loss/take_profit/exit_existing sell, since risk management must never bend to a tax outcome; those sells are instead logged with a wash-sale flag if one applies, for the human's own tax tracking. This cannot prevent a wash sale caused by a purchase made LATER in another linked account after a sell from this account -- those accounts are outside this pipeline's control; only the human can avoid that side.",
     "lookback_window_days": 30,
-    "linked_accounts": ["YOUR_ACCOUNT_NUMBER_HERE", "YOUR_OTHER_ACCOUNT_NUMBER_HERE"]
+    "linked_accounts": ["YOUR_IBKR_ACCOUNT_ID_HERE", "YOUR_OTHER_ACCOUNT_ID_HERE"],
+    "linked_accounts_note": "IMPORTANT LIMITATION: the IBKR connector exposes only the account it is connected to -- get_account_trades and get_account_positions take no account parameter. Any linked account at another broker, or under a different IBKR login, is invisible to this guard, and an account that cannot be checked is NOT an account that came back clean. Phase B must log every linked account it could not actually query rather than treating silence as a pass."
   },
 
   "universe": {
     "watchlist_name": "YOUR_WATCHLIST_NAME_HERE",
+    "watchlist_name_note": "An IBKR watchlist you have already created and populated. Phase A resolves it via get_watchlists (match on name) then get_watchlist.",
     "watchlist_max_candidates": 25,
-    "min_avg_daily_volume": 1000000,
-    "min_market_cap_usd": 2000000000,
-    "max_market_cap_usd": 50000000000,
+    "min_avg_90d_usd_volume": 20000000,
     "penny_stock_price_threshold_usd": 5.00,
     "exclude": ["penny_stocks", "leveraged_etfs", "inverse_etfs"],
-    "supplementary_scan_id": "YOUR_SCAN_ID_HERE",
-    "supplementary_scan_max_candidates": 5,
-    "supplementary_scan_note": "Robinhood scan -- relative volume > 2.0x (30d) and market cap > min_market_cap_usd, matching signal_thresholds.volume_spike_multiple and this same block's own min_market_cap_usd rather than separate numbers. Additive to watchlist_max_candidates, not shared with it -- the watchlist's own slots are never crowded out by scan results. Create your own scan (relative volume + market cap filters) via the Robinhood MCP's create_scan tool and paste its scan_id here. Scan config has no upper market-cap bound; max_market_cap_usd still applies to its results via Phase A's post-merge filtering."
+    "leveraged_inverse_name_keywords": ["ULTRAPRO", "ULTRASHORT", "LEVERAGE", "INVERSE", "-1X", "1X", "2X", "3X", "4X", "5X"],
+    "leveraged_inverse_name_exceptions": [],
+    "leveraged_inverse_note": "MULTIPLIER-BASED ON PURPOSE, tuned against real search_contracts output rather than guesswork. Every leveraged product returned for a live AAPL query carried an explicit multiplier in its name: 'DIREXION DAILY AAPL BULL 2X', 'DIREXION DAILY AAPL BEAR 1X', 'GRANITESHARES 2X LONG AAPL D', 'LEVERAGE SHARES 2X AAPL ETF', 'CORGI AAPL 2X DAILY ETF'. Matching the multiplier alone catches all of them. Bare words like ULTRA, BULL, BEAR and SHORT were REMOVED: the connector does not expose a stock_type field, so unlike the TWS route there is no ETF gate to keep them from hitting ordinary companies -- 'ULTRA' would exclude Ultra Clean Holdings and 'BULL' would catch any operating company with it in the name. Note LEVERAGE, not LEVERAGED, so it also matches 'LEVERAGE SHARES'. Since the universe is entirely hand-curated (see no_market_scan_note), the real defence is not putting leveraged products on your watchlist -- treat this as a backstop.",
+    "no_market_cap_filter_note": "REMOVED, not merely relaxed. The Robinhood build filtered on min_market_cap_usd (2B) and max_market_cap_usd (50B). The IBKR connector exposes NO market cap at all: get_price_snapshot offers avg_90d_usd_volume, misc_statistics (52-week high/low), and total_net_assets, none of which is market cap. min_avg_90d_usd_volume above is a LIQUIDITY floor standing in for the size floor -- it is a genuine substitute for 'not a micro-cap', but there is no substitute at all for the 50B CEILING. Enforce that yourself by curating the watchlist; nothing here can.",
+    "no_market_scan_note": "REMOVED. The Robinhood build ran a saved relative-volume scan each cycle to surface movers outside the watchlist. The IBKR connector has no scanner -- search_investment_topics and get_company_themes are thematic browsing, not quantitative screening. The candidate universe is therefore exactly your watchlist, nothing more, and the pipeline can no longer discover anything you did not put in front of it. This is the largest functional loss of the connector route after the missing stop orders."
   },
 
   "execution": {
     "mode": "dry_run",
-    "note": "mode must be manually changed from 'dry_run' to 'live' by the human. Claude must never change this value itself, and must refuse to place live orders while mode is 'dry_run'.",
-    "dry_run_min_cycles_before_live": 10
+    "note": "mode must be manually changed from 'dry_run' to 'live' by the human. Claude must never change this value itself, and must refuse to create order instructions while mode is 'dry_run'.",
+    "mode_semantics_note": "READ THIS -- 'live' means something weaker here than in a direct-API deployment. The IBKR connector cannot place orders: create_order_instruction produces a DRAFT that sits in IBKR's AI Instructions queue until you open the app and tap Review & Submit. So 'live' means 'instructions reach your queue', not 'money moves'. The final decision on every single trade is still yours, at the moment it happens. The dry-run period is still worth serving in full -- it validates the reasoning and the sizing before your queue starts filling up.",
+    "dry_run_min_cycles_before_live": 10,
+    "fractional_shares": true,
+    "fractional_shares_note": "VERIFY THIS IS ACTUALLY ENABLED on the account in Client Portal -- it is not on by default. Set true here because at starting_capital_usd = 544.52 a full-size entry is ~$109, and whole-share mode made 6 of the 9 names on the live watchlist unbuyable (SPCX $134, SKHY $147, NBIS $211, CBRS $238, MSFT $500, LITE $886 all cost more than one position's worth per share). If fractional is NOT actually enabled, orders will be rejected at approval time rather than silently mis-sized -- scripts/dollars_to_shares.py still returns action 'skip' when whole-share mode cannot buy one share, so the failure is visible either way.",
+    "declined_instruction_note": "A tier or stop that has fired is recorded as fired whether or not you approve the instruction. If you decline one in the IBKR app, the pipeline will not automatically re-propose it: a take-profit tier fires once per holding period, and a stop-loss will only re-trigger if the next cycle's drawdown still meets stop_pct. Declining is a real decision that overrides the mechanical rule -- make it deliberately, not by ignoring the queue."
+  },
+
+  "instruction_queue": {
+    "replace_stale_instructions": true,
+    "max_instruction_age_cycles": 1,
+    "note": "Before creating an instruction for a symbol, Phase B checks get_order_instructions for an existing pending one. If it is older than max_instruction_age_cycles, it was priced against a stale quote and sized against a stale account balance, so it is deleted via delete_order_instruction and recreated fresh at today's numbers. Set replace_stale_instructions to false to leave old instructions alone, at the cost of a queue that drifts further from the current risk picture every day it goes untouched.",
+    "expiry_note": "MEASURED, not assumed: IBKR expires an instruction exactly 7 days after creation -- a live round-trip returned creation_time 2026-08-12T11:07:26.283Z with expiration 2026-08-19T11:07:26.283Z. Nothing here sets or extends that. Two consequences. (1) max_instruction_age_cycles = 1 means this pipeline re-prices daily and the 7-day expiry is never reached in normal operation; it only matters if Phase B stops running. (2) An expired instruction and a declined one both vanish from the queue, so Phase B records `expiration` on every instruction entry and compares against it at resolution time -- an expiry means the queue went unread, a decline means the human decided, and conflating them would report your inattention as a decision."
   },
 
   "cadence": {
