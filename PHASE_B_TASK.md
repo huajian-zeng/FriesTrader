@@ -78,6 +78,23 @@ spec says to fail safe, that is exactly the condition meant.
 3. Determine today's day of week mechanically (e.g.
    `TZ='America/Chicago' date +'%A'`) — don't infer it from the date
    string. Needed for Step 4's weekend-gap check.
+
+   **Market-hours guard — check the clock, don't trust the schedule.**
+   Read the current time with `TZ='America/Chicago' date +'%H:%M'` and
+   **stop the run** unless it falls between **08:30 and 15:00** Central,
+   on a weekday. Log
+   `"stage": "cycle_summary", "halted": true, "reason": "ran at <HH:MM> Central, outside the 08:30-15:00 regular session — Phase B requires live opening-session quotes"`
+   and create nothing.
+
+   This exists because the schedule cannot be trusted to stay correct.
+   Cloud cron fires on a fixed UTC expression while Central time shifts
+   with daylight saving: a `35 13 * * 1-5` cron is 08:35 Central in summer
+   and **07:35 Central in winter — 55 minutes before the market opens**.
+   Nothing else in this pipeline would notice. Quotes would come back
+   pre-market, the `data_type` check would reject every candidate, and the
+   cycle would log a clean-looking no-op every single day until someone
+   thought to look. Fix the cron when the guard starts firing; the guard
+   is what makes that failure visible instead of silent.
 4. **Reconcile the instruction queue (do this before anything else
    reads a position).** Instructions this pipeline created on earlier
    cycles may since have been approved, declined, or left sitting. Call

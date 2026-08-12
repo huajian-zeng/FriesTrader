@@ -46,6 +46,21 @@ If a call fails or returns nothing usable, log what failed and drop that
 candidate. Never substitute a value from a previous run, a plausible
 estimate, or your own knowledge for data a failed call didn't return.
 
+## Market-hours guard — check the clock, don't trust the schedule
+
+Before Step 1, read the current time with
+`TZ='America/Chicago' date +'%H:%M'` and **stop the run** unless it is
+**15:00 Central or later** on a weekday. Write
+`"stage": "summary", "halted": true, "reason": "ran at <HH:MM> Central, before the 15:00 close — the latest daily bar is incomplete and every 60-day signal would be computed against a partial session"`
+to `pending_proposals.jsonl` and do nothing else.
+
+Cloud cron fires on a fixed UTC expression while Central time shifts with
+daylight saving, so a schedule that is 16:30 Central in summer becomes
+15:30 in winter. That particular drift still lands after the close, but
+the same mechanism can push a run into the session, where the newest daily
+bar is a half-finished day and every 60-day move is computed against it.
+This guard makes that visible instead of quietly poisoning the inputs.
+
 ## Step 1 — Build the watchlist
 
 Pull symbols from every IBKR watchlist named in `universe.watchlist_names`
