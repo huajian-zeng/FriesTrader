@@ -64,8 +64,9 @@
   },
 
   "universe": {
-    "watchlist_name": "YOUR_WATCHLIST_NAME_HERE",
-    "watchlist_name_note": "An IBKR watchlist you have already created and populated. Phase A resolves it via get_watchlists (match on name) then get_watchlist.",
+    "watchlist_names": ["me", "quantgt_8"],
+    "watchlist_names_note": "IBKR watchlists you have already created and populated. Phase A resolves each via get_watchlists (exact match on name) then get_watchlist, and unions the results with duplicates removed. A name that matches no watchlist is a hard error, not a silent skip -- a typo would otherwise quietly shrink the universe with nothing in the log to show it.",
+    "non_equity_note": "A watchlist can hold instruments this pipeline cannot trade. Verified live: the 'Favorites' list contains FX pairs whose contract_id_ex carries an exchange suffix (e.g. '12087792@IDEALPRO') alongside ordinary stocks. Phase A drops any instrument whose contract_id_ex is not a bare integer, and any whose search_contracts row is not a US-listed STK. Without that guard an FX pair would be fetched as if it were a stock and screened on meaningless numbers.",
     "watchlist_max_candidates": 25,
     "min_avg_90d_usd_volume": 20000000,
     "penny_stock_price_threshold_usd": 5.00,

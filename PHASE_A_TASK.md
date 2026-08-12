@@ -48,10 +48,35 @@ estimate, or your own knowledge for data a failed call didn't return.
 
 ## Step 1 — Build the watchlist
 
-Pull symbols from the IBKR watchlist named `universe.watchlist_name` in
-`risk_rules.json` (read fresh each run — don't assume prior values or
-hardcode the name). Call `get_watchlists` to find its id by matching the
-name, then `get_watchlist` on that id — ignore all other watchlists.
+Pull symbols from every IBKR watchlist named in `universe.watchlist_names`
+in `risk_rules.json` (read fresh each run — don't assume prior values or
+hardcode the names). Call `get_watchlists` once, match each configured
+name **exactly** against the returned `name` field, then call
+`get_watchlist` on each matching id. Ignore watchlists not in the list.
+
+**Union the results and drop duplicates by `contract_id_ex`** — a symbol
+on two lists is one candidate, not two.
+
+**If a configured name matches no watchlist, stop the run and log it.**
+Do not proceed with the lists that did resolve: a typo would otherwise
+silently shrink the candidate universe every cycle with nothing in the log
+to show what went missing.
+
+**Drop anything that isn't a US-listed stock**, before spending any call
+on it. Watchlists are not restricted to equities — a live check found FX
+pairs sitting alongside stocks in one of this account's lists. Two
+mechanical tests, both required:
+
+1. `contract_id_ex` must be a **bare integer**. An exchange suffix
+   (`12087792@IDEALPRO`) means a non-STK instrument — FX, futures, or an
+   option — and is dropped.
+2. The `search_contracts` row selected for it (see Broker access above)
+   must be US-listed with `STK` among its `sections`.
+
+Log each drop as
+`"stage": "screened", "passed_filters": false, "reason": "not a US-listed stock (contract_id_ex \"<value>\") — watchlists can hold FX and other non-equity instruments this pipeline cannot trade"`.
+Never try to price or screen one of these: an FX pair fetched as if it
+were a stock returns numbers that look plausible and mean nothing.
 
 > **There is no supplementary market scan.** The Robinhood build ran a
 > saved relative-volume scan each cycle to surface movers from outside

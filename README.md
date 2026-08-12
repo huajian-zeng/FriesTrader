@@ -215,8 +215,10 @@ in Example output.
    not to notice.
 4. Fill in `account_number` in `risk_rules.json` with your IBKR account
    id (e.g. `U1234567`), set `starting_capital_usd` to your real starting
-   balance, set `universe.watchlist_name` to a watchlist you've already
-   created and populated in IBKR, and review every other threshold — the
+   balance, set `universe.watchlist_names` to one or more watchlists you've
+   already created and populated in IBKR (they are unioned, duplicates
+   dropped; a name that matches nothing stops the run rather than silently
+   shrinking the universe), and review every other threshold — the
    defaults here are illustrative, not a recommendation. Pay particular
    attention to `position_sizing.commission_note`: IBKR charges per order
    and this pipeline queues small ones, so confirm the economics work at
