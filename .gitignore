@@ -1,2 +1,9 @@
-.claude/
+# Ignore everything under .claude/ except the checked-in permission rules.
+# settings.json must travel with the repo: a scheduled Phase B run that
+# clones fresh needs the create_order_instruction allow rule, or Step 6 is
+# blocked and the cycle logs a clean-looking no-op every day.
+.claude/*
+!.claude/settings.json
+
 logs/
+__pycache__/
