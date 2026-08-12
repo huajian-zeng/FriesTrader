@@ -59,6 +59,31 @@ def main():
 
     results = []
 
+    if args.total_value <= 0:
+        # An unfunded or fully drawn-down account. Every size here is a
+        # percentage OF total_value, so without this guard each candidate
+        # would be approved at $0.00 and then crash on the cash-buffer
+        # division. Reject explicitly instead: the log should say the
+        # account has no value, not "the sizing script failed".
+        for c in candidates:
+            rejected = {
+                "symbol": c["symbol"], "group": c["group"], "conviction": c["conviction"],
+                "passed": False,
+                "reason": (
+                    f"account total_value is ${args.total_value:.2f} — nothing can be sized "
+                    f"against a zero or negative account value"
+                ),
+            }
+            if c["group"] == "held":
+                rejected["position_action"] = "top_up"
+            results.append(rejected)
+        print(json.dumps({
+            "results": results,
+            "cash_remaining_final": round(cash_remaining, 2),
+            "concurrent_positions_after_final": concurrent_positions_after,
+        }))
+        return
+
     for c in candidates:
         symbol = c["symbol"]
         group = c["group"]
