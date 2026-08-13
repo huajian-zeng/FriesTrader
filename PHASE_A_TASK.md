@@ -209,12 +209,18 @@ Phase B's job. See Hard stop below.)
 Pull ~60 days of daily price history per candidate with
 `get_price_history` (`security_type: "STK"`, `step: "ONE_DAY"`,
 `period: "THREE_MONTHS"`, `outside_rth: false`), called fresh for every
-candidate this run. Trim the returned bars to the ones inside the last
-**60 calendar days** before using them — `THREE_MONTHS` deliberately
-over-fetches so the 60-day window is complete after weekends and
-holidays, but the window itself must be 60 calendar days, not 60 bars
-(counting back 60 bars drifts to ~85-90 calendar days and overstates the
-move).
+candidate this run.
+
+**Do not trim the bars yourself — pass `--cutoff-date <today>` and let
+the script do it.** `THREE_MONTHS` deliberately over-fetches so the
+60-day window is complete after weekends and holidays, but the window
+itself must be 60 *calendar* days. Measured on a real 3-month response,
+skipping the trim reports a 28.6% move where the true 60-day figure is
+18.3% — a 57% overstatement that also inflates `magnitude_score` and so
+reorders the news-search budget. `get_price_history` stamps `time` as an
+ISO-8601 string with a `Z` suffix, not an epoch integer; a hand-rolled
+trim written on the epoch assumption parses nothing and silently keeps
+the entire 3-month range, which looks like it worked.
 
 Never reuse `close_60d_ago`, `latest_close`, or any other
 history-derived value from a prior run's `pending_proposals.jsonl` or
@@ -231,10 +237,15 @@ echo '{"history": <the get_price_history response object, VERBATIM>,
        "low_52_weeks": <misc-statistics.low_52w, or null>,
        "current_price": <from Step 1>}' \
 | python3 scripts/signal_check.py \
+    --cutoff-date <today, YYYY-MM-DD, America/Chicago> \
     --price-move-threshold <signal_thresholds.price_move_60d_pct> \
     --volume-spike-threshold <signal_thresholds.volume_spike_multiple> \
     --pct-from-52wk-threshold <signal_thresholds.pct_from_52wk_extreme>
 ```
+
+The script's output gains a `window` object (`bars_before_trim`,
+`bars_after_trim`, `window_start`, `window_end`). Log it — it is the
+evidence that the 60-day move was measured over 60 days.
 
 **Pass `get_price_history`'s response through untouched.** It returns
 COLUMNAR parallel arrays — `{"time": [...], "close": [...], "volume":

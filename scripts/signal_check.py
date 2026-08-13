@@ -29,6 +29,7 @@ import argparse
 import json
 import statistics
 import sys
+from datetime import datetime, timedelta
 
 
 def to_bars(payload):
@@ -58,6 +59,34 @@ def to_bars(payload):
         }
         for i in range(len(closes))
     ]
+
+
+def trim_to_window(bars, cutoff_date, calendar_days):
+    """Keep only bars inside the last `calendar_days` ending on cutoff_date.
+
+    get_price_history stamps `time` as an ISO-8601 string with a Z suffix
+    ("2026-05-15T13:30:00Z"), NOT an epoch integer — a helper written on the
+    epoch assumption parses nothing and silently keeps the whole 3-month
+    range, which is exactly the over-long window this trim exists to avoid.
+
+    A bar with no usable date is dropped rather than kept: including a bar
+    that cannot be placed in the window would put an unknown date into the
+    60-day move.
+    """
+    end = datetime.strptime(cutoff_date, "%Y-%m-%d").date()
+    start = end - timedelta(days=calendar_days)
+    kept = []
+    for bar in bars:
+        raw = bar.get("date")
+        if not raw:
+            continue
+        try:
+            day = datetime.strptime(str(raw)[:10], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if start <= day <= end:
+            kept.append(bar)
+    return kept
 
 
 def pct_move(bars):
@@ -127,6 +156,14 @@ def main():
                     help="signal_thresholds.pct_from_52wk_extreme")
     p.add_argument("--volume-lookback-bars", type=int, default=30,
                     help="bars to average for the volume baseline (default 30)")
+    p.add_argument("--cutoff-date",
+                    help="today's date as YYYY-MM-DD in America/Chicago. Trims the bars to the "
+                         "last 60 CALENDAR days ending here, which is the window the 60-day "
+                         "signal is defined over. get_price_history is asked for THREE_MONTHS so "
+                         "the window is complete after weekends and holidays; without this the "
+                         "move would be measured over ~90 days and overstated.")
+    p.add_argument("--calendar-days", type=int, default=60,
+                    help="length of the trim window in calendar days (default 60)")
     args = p.parse_args()
 
     try:
@@ -140,6 +177,16 @@ def main():
     except ValueError as exc:
         print(json.dumps({"error": str(exc)}), file=sys.stderr)
         sys.exit(1)
+    if args.cutoff_date:
+        before = len(bars)
+        bars = trim_to_window(bars, args.cutoff_date, args.calendar_days)
+        trimmed = {"bars_before_trim": before, "bars_after_trim": len(bars),
+                   "window_start": (datetime.strptime(args.cutoff_date, "%Y-%m-%d").date()
+                                    - timedelta(days=args.calendar_days)).isoformat(),
+                   "window_end": args.cutoff_date}
+    else:
+        trimmed = None
+
     current_price = payload.get("current_price")
     if not current_price:
         print(json.dumps({"error": "current_price is required"}), file=sys.stderr)
@@ -189,6 +236,8 @@ def main():
                         (("price_move_60d", move), ("volume_spike", spike),
                          ("pct_from_52wk_extreme", extreme)) if value is None],
     }
+    if trimmed:
+        result["window"] = trimmed
     print(json.dumps(result))
 
 
