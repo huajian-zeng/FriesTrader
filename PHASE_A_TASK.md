@@ -310,6 +310,14 @@ For each flagged candidate, produce the thesis record from `README.md`
 (symbol, date, thesis, conviction, invalidation, direction).
 - **No price targets.**
 - **No forecasting as fact** — "this suggests..." not "this will...".
+- **No reported figure you did not read in a source this run.** Never call
+  a result a beat, a miss, or a raise on inference from the price move or
+  from memory. On the first live cycle a thesis described Cerebras as
+  beating and raising when the quarter was a revenue miss; the stock had
+  gapped up that morning, so nothing downstream caught it until Phase B
+  went looking. If a source you actually read does not state the figure,
+  say the print is unconfirmed and let the conviction rubric cap it —
+  unresolved evidence is a `low`, and that is the correct outcome.
 
 **`conviction` follows a fixed rubric, not open judgment** — the same
 underlying facts must produce the same rating regardless of which day

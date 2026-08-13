@@ -326,8 +326,8 @@ Hard stop: create_order_instruction and delete_order_instruction should not be a
 When pending_proposals.jsonl is fully written, commit and push it back to this repo's main branch:
 git add pending_proposals.jsonl
 git commit -m "Phase A run <date> <timestamp>"
-git push origin main
-If the push is rejected (e.g. a race with another run), run 'git pull --rebase origin main' once and retry the push once. If it still fails, report the exact conflict/error in your final summary rather than force-pushing or discarding either side's changes.
+git push origin HEAD:main
+IMPORTANT: use HEAD:main, not 'origin main'. A cloud routine's checkout sits on a DETACHED HEAD with a stale local 'main' ref, so 'git push origin main' pushes that older ref and is rejected every run. If HEAD:main is itself rejected, someone pushed in the meantime: run 'git fetch origin main', confirm your commit is a fast-forward child of origin/main, then retry once. If it still fails, report the exact conflict/error rather than force-pushing or discarding either side's changes.
 
 End with a concise summary of what you screened/filtered/proposed, and confirm the push succeeded (include the resulting commit hash).
 ```
@@ -356,10 +356,10 @@ Follow PHASE_B_TASK.md's Steps 0 and 4-7 exactly, including Step 0's connector p
 Never re-propose an instruction the human declined, on that basis alone — a decline is a deliberate human override of a mechanical rule, and repeating it is overruling them by repetition. Before creating any instruction, check get_order_instructions for an existing pending one for the same symbol; two instructions for one symbol in the queue is how a position gets accidentally doubled with two taps.
 
 Append every decision to trade_log.jsonl (do not touch pending_proposals.jsonl except to read it). When done, commit and push trade_log.jsonl back to this repo's main branch:
-git add trade_log.jsonl
+git add trade_log.jsonl trade_log_recent.md
 git commit -m "Phase B run <date> <timestamp>"
-git push origin main
-If the push is rejected (e.g. a race with another run), run 'git pull --rebase origin main' once and retry the push once. If it still fails, report the exact conflict/error in your final summary rather than force-pushing or discarding either side's changes — this file is an append-only audit trail, treat any conflict here as serious and report it clearly rather than guessing how to resolve it.
+git push origin HEAD:main
+IMPORTANT: use HEAD:main, not 'origin main' — see the Phase A note above; the same detached-HEAD problem applies. If HEAD:main is itself rejected, run 'git fetch origin main', confirm your commit is a fast-forward child of origin/main, then retry once. If it still fails, report the exact conflict/error rather than force-pushing — this file is an append-only audit trail, treat any conflict here as serious rather than guessing how to resolve it.
 
 End with a concise summary of what you checked, approved, rejected, and (if applicable) QUEUED FOR APPROVAL — stating clearly that queued instructions have not executed and need a tap in the IBKR app. Lead that summary with the count of instructions now awaiting approval. Confirm the push succeeded (include the resulting commit hash).
 ```

@@ -216,6 +216,24 @@ hours. **If today is Monday**:
 
 Other weekdays: skip straight to the price-based check.
 
+### Fact check — the thesis can be wrong, not just stale
+
+**Before the price check, verify the disclosed facts the thesis rests on.**
+Phase A's research can misread a print. On the first live cycle it
+described Cerebras as having beaten and raised guidance when the quarter
+was a revenue **miss** — and because the stock happened to gap *up* that
+morning, a price-only check waved it through.
+
+If your own research contradicts a company-disclosed figure the thesis is
+built on — a miss called a beat, a cut called a raise, a pending event
+described as completed — **that thesis is invalidated regardless of which
+way the price moved**. Drop the candidate and log
+`"stage": "risk_check", "passed": false, "proposal_date": "<candidate's date>", "reason": "thesis contradicted by disclosed facts: <what the thesis claimed> vs <what the source reports>", "sources": ["Outlet: https://..."]`.
+
+Price direction is not evidence either way here. A wrong thesis that
+happens to be moving the right way is still a wrong thesis, and it is the
+one most likely to be acted on.
+
 ### Price-based staleness check (every day)
 
 Pull a fresh quote (`get_price_snapshot`, `market_data_names: ["last",
