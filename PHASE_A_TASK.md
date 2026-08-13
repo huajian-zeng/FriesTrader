@@ -405,6 +405,17 @@ Every line needs a real `"timestamp"` (`HH:mm:ss`, e.g. via
 never used for idempotency or other logic.
 
 Write:
+- **One `"stage": "run"` line first**, recording what this cycle did rather
+  than what it decided:
+  ```json
+  {"date": "YYYY-MM-DD", "timestamp": "HH:mm:ss", "stage": "run", "phase": "A",
+   "account_fingerprint": {"position_count": 0, "held_symbols": [], "source": "get_account_positions",
+     "note": "no connector endpoint returns an account identifier — this is a fingerprint for a human reader, not a verification of which account is connected"},
+   "watchlists_resolved": {"<name>": "<id>"},
+   "candidates_total": N, "news_searches_spent": N, "news_search_budget_per_cycle": N}
+  ```
+  This is where the `account_fingerprint` required in Step 1 lives. Phase B
+  reads only `"stage": "thesis"` entries, so this line is inert to it.
 - One `"stage": "screened"` line per candidate (`passed_filters`,
   `source` (always `"watchlist"`), `avg_90d_usd_volume`, `contract_id`,
   `reason` if rejected — shape matches `trade_log_template.jsonl`), plus
