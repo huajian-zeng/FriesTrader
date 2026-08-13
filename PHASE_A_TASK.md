@@ -312,12 +312,30 @@ For each flagged candidate, produce the thesis record from `README.md`
 - **No forecasting as fact** — "this suggests..." not "this will...".
 - **No reported figure you did not read in a source this run.** Never call
   a result a beat, a miss, or a raise on inference from the price move or
-  from memory. On the first live cycle a thesis described Cerebras as
-  beating and raising when the quarter was a revenue miss; the stock had
-  gapped up that morning, so nothing downstream caught it until Phase B
-  went looking. If a source you actually read does not state the figure,
-  say the print is unconfirmed and let the conviction rubric cap it —
-  unresolved evidence is a `low`, and that is the correct outcome.
+  from memory. If a source you actually read does not state the figure, say
+  the print is unconfirmed rather than supplying a number.
+
+- **Report both metrics when a company publishes conflicting ones.** Many
+  reports carry a GAAP headline and a company-preferred adjusted or "core"
+  figure that point opposite ways. Quote both, labelled, or the thesis is
+  built on whichever one happened to flatter the read. The first live cycle
+  did exactly this on Cerebras: it cited core revenue of $209.9M against
+  ~$198.1M expected (a genuine beat) without mentioning that GAAP revenue
+  of $180.1M missed a $194M consensus. Both were true; only one was quoted.
+
+- **A large adverse price move you cannot explain means your facts are
+  incomplete — keep digging.** This is the sharper rule, because it catches
+  errors the two above cannot. That same Cerebras thesis reported an
+  adjusted loss of $0.04 per share against $0.17 expected; the actual loss
+  was **$2.98**, and hardware revenue had fallen 23% year over year. With a
+  wrong profitability figure in hand the thesis read as a clean beat, so the
+  14% after-hours drop looked inexplicable — and it was logged as an
+  unresolved counter-case rather than as evidence that something in the
+  research was wrong. When the disclosed facts as you have them say one
+  thing and the tape says the opposite by a wide margin, **the tape is
+  telling you what you missed**. Search again before writing the thesis.
+  Only if a further search still cannot reconcile it may you write it up,
+  and then it is unresolved evidence and therefore `low`.
 
 **`conviction` follows a fixed rubric, not open judgment** — the same
 underlying facts must produce the same rating regardless of which day
@@ -358,6 +376,15 @@ conviction for the same symbol.
   is still pending, or multiple contributing factors are listed without
   one clearly resolved as dominant, or no counter-case is explicitly
   engaged and dismissed.
+
+**`low` and `medium` both mention the counter-case — the split is whether
+you looked.** A counter-case you never engaged leaves the read merely
+incomplete, which is `medium`. A counter-case you did engage and could
+**not** settle is unresolved evidence, which is `low`. The first live cycle
+got this backwards: its Cerebras thesis said in as many words that the
+counter-case was "named but not answered" and that the reaction "has not
+settled", then rated it `medium`. Naming a counter-case you cannot answer
+is the `low` trigger, not an escape from it.
 
 **For a held position**, `direction` is `"long"` (still supports holding)
 or `"exit_existing"` (no longer does) — never `"avoid"` (that's only for
