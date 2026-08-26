@@ -1,114 +1,56 @@
-# 2026-08-25
+# 2026-08-26
 
 ## ✅ 0 instructions awaiting your approval in IBKR
+The IBKR AI Instructions queue is empty. Nothing was created this cycle, so there is nothing to review and **nothing has executed**.
 
-The queue is empty. Nothing was created this cycle, and nothing is waiting for
-your tap. **No trade was executed by this pipeline today.**
-
-Ran 08:37–08:41 Central on a Tuesday, inside the 08:30–15:00 regular session.
-All quotes came back REALTIME (live).
-
-## Reconciliation — nothing left unread
-
-`get_order_instructions` was empty at the start of the cycle, and every
-instruction this pipeline has ever created was already resolved on an earlier
-cycle. The last two (the 2026-08-21 CORT and ALAB top-ups) were reconciled as
-approved fills on 2026-08-24. **No decline, no expiry, no new fill to record.**
-
-## Loss limits — clean
-
-| | Realized | Limit | |
-|---|---|---|---|
-| Daily | $0.00 (0.00%) | 5% of $542.44 | ✅ |
-| Weekly | $0.00 (0.00%) | 10% of $542.44 | ✅ |
-
-No sell settled in the current Chicago trading week (from Monday 2026-08-24).
-Last week's −$5.22 COHR stop-loss loss has rolled out of the weekly window.
-**Entries are not halted.**
-
-## Held positions — stop-loss and take-profit
-
-Nothing triggered and no take-profit tier fired. No tier has ever fired on any
-of these holdings, so every stop still references average cost.
-
-| Symbol | Qty | Avg cost | Now | Drawdown / gain | Stop used | Status |
-|---|---|---|---|---|---|---|
-| MSFT | 0.4356 | $503.62 | $487.33 | −3.23% | 9.76% | holding |
-| CORT | 0.8489 | $121.75 | $125.18 | **+2.82%** | — (gain, not computed) | holding |
-| DELL | 0.1309 | $497.02 | $446.60 | −10.14% | 12.52% | holding |
-| ALAB | 0.2129 | $307.23 | $285.85 | −6.96% | 15.00% (clamped) | holding |
-
-DELL is the closest to its stop, with 2.4 points of drawdown to go.
-
-## Candidates considered — 6, none approved
-
-**New entries (2) — short-circuited on capacity.** The account is at 4 of 4
-concurrent positions with an empty queue, so no new entry could be approved and
-neither candidate got a staleness re-check:
-
-- **COHR** (low conviction) — no open slots. Separately: COHR still carries an
-  unresolved sell re-entry lock from the 2026-08-20 stop-loss sell at $286.25.
-- **NBIS** (low conviction, `dilution_risk`) — no open slots.
-
-**Top-ups (4) — all rejected by `position_sizing.py` on sizing:**
-
-- **MSFT** — already $212.28 against a $104.15 target. No top-up.
-- **CORT** — already $106.27 against a $62.49 target. No top-up.
-- **ALAB** — already $60.86 against a $31.25 target. No top-up.
-- **DELL** — $4.03 of headroom, below the $6.25 minimum top-up. No order attempted.
-
-## Thesis fact-check — all four confirmed
-
-Each held thesis was re-verified against the company's own disclosures, not just
-its price. **No beat/miss or raise/cut reversal was found.**
-
-- **MSFT** — FY26 Q4 (2026-07-29): revenue $90.01B vs $87.63B consensus, adj. EPS
-  $4.74, Azure +43% and above $100B for the fiscal year, commercial RPO $678B
-  up 84%. Confirmed.
-- **CORT** — Q2 2026 (2026-07-29): record revenue $256.1M (+32% YoY), EPS $0.36,
-  Lifyorli $47.6M, full-year guidance **raised** to $1.1–1.2B. Confirmed — and
-  the raise genuinely post-dates the December 2025 CRL, as the thesis argues.
-- **DELL** — Q1 FY2027: revenue $43.8B (+88% YoY), AI server revenue $16.1B,
-  non-GAAP EPS $4.86, FY2027 guidance raised to $165–169B. Confirmed.
-- **ALAB** — Q2 2026 (2026-08-04): record revenue $392.4M (+104% YoY, +27% seq),
-  Q3 guided to $540–560M, gross margin 73.7% actual guiding to ~72%. Confirmed —
-  the thesis's "guided down to ~72% from 74%" is accurate to rounding.
-
-Two discrepancies turned up in DELL's thesis; **neither invalidates it**, but
-both are worth knowing:
-
-1. It dates the print 2026-05-29 when the release is 2026-05-28.
-2. It quotes "$12.3B of AI server orders and a record $18.4B backlog" from a
-   source covering the **older Q3 FY2026 quarter**. The current quarter
-   disclosed $24.4B in AI orders and a $51.3B backlog — so that figure is stale
-   and *understates* the business rather than misstating it.
-
-Price gaps versus Phase A were all small — MSFT −0.05%, CORT +1.48%, DELL +3.11%,
-ALAB +3.56% — and none meets its thesis's invalidation criteria. DELL's move
-tracks pre-earnings profit-taking on Monday and a partial rebound today, not any
-disclosure.
-
-## ⚠ For your attention
-
-- **MSFT is 40.8% of net liquidation** ($212.28 of $520.76) against a 20% cap —
-  still a legacy of the 2026-08-14 duplicate fill. No mechanical rule forces a
-  trim, so this is flagged, not acted on. Only you can decide to trim it.
-- **DELL reports earnings within days** (coverage says 2026-08-28 or 2026-09-03).
-  The stop is evaluated once a day and there is no resting stop at the broker,
-  so a post-earnings gap would be held until the next cycle at the earliest.
-
-## Partial checks — logged every cycle
-
-- **Account identity is unverified.** No IBKR connector endpoint returns an
-  account identifier, so `account_number` could not be checked. The fingerprint
-  (net liq $520.76 inside the $400–900 band, 4 positions: ALAB, CORT, DELL,
-  MSFT) is a **tripwire, not a guarantee** — it cannot distinguish two accounts
-  of similar size.
-- **The wash-sale guard is incomplete.** Linked account
-  `YOUR_OTHER_ACCOUNT_ID_HERE` is not reachable through this connector and was
-  **not** checked. An account that cannot be checked is not an account that came
-  back clean.
+Nothing was resolved either: every instruction this pipeline has ever created was already reconciled on an earlier cycle, and no approval, decline or expiry happened since yesterday's run.
 
 ---
-*`trade_log.jsonl` is the source of truth; this file is a convenience view. If
-the two disagree, trust the log.*
+
+## Loss limits — clear
+Realized P&L this Chicago trading week (starting 2026-08-24): **$0.00**, so 0.00% of the $542.44 starting capital against a 5% daily / 10% weekly limit. No trades have settled this week. New entries and top-ups are **not** halted.
+
+One FX row (AED.USD) was skipped — a currency conversion, not trading P&L.
+
+## Held positions — stop-loss and take-profit
+All four checked against fresh REALTIME quotes at 08:43 Central. **Nothing triggered, nothing to sell.**
+
+| Symbol | Avg cost | Fresh price | Gain / (drawdown) | Stop used | Status |
+|---|---|---|---|---|---|
+| MSFT | $503.62 | $493.02 | (2.10%) | 9.70% | holding |
+| CORT | $121.75 | $122.36 | +0.50% | n/a — at a gain | holding |
+| DELL | $497.02 | $462.20 | (7.01%) | 12.05% | holding |
+| ALAB | $307.23 | $284.14 | (7.52%) | 15.00% (clamped) | holding |
+
+No take-profit tier has fired for any position this holding period — the nearest is the 15% first tier and CORT, the only position at a gain, is at +0.50%.
+
+> ⚠️ Reminder: there is no resting stop at the broker. IBKR's instruction API has no stop order type, so these stops are evaluated **once a day, here**. A position can gap down hard mid-session and stay held until the next run.
+
+## Candidates considered — 8, none approved
+
+**New entries (4) — blocked on capacity, not on quality:**
+All four positions slots are full (4 of 4), and nothing is pending in the queue, so no new entry could be approved regardless of thesis. Per the spec these were short-circuited *before* any re-verification work:
+
+- **SNDK** (low conviction) — no open slot
+- **COHR** (low) — no open slot
+- **MU** (low) — no open slot
+- **AAOI** (low) — no open slot
+
+**Top-ups (4) — theses re-verified, then rejected on sizing:**
+Every held thesis had its company-disclosed figures re-checked against primary sources this morning. **All four held up.** They were then rejected purely by the sizing math:
+
+- **MSFT** (high) — FY26 Q4 confirmed: revenue $90.0B +18%, operating income $40.6B, Azure past $100B for the year at +41%, Q1 guided ~45% cc (above the 40% invalidation line). Position $214.76 vs. $104.95 target — **already 2× target size, no top-up.**
+- **DELL** (medium) — Q1 FY27 confirmed: revenue $43.8B +88%, AI servers $16.1B +757%, non-GAAP EPS $4.86 +214%, FY27 guide $165–169B. GAAP EPS is $5.24 +282%, i.e. the thesis understated it. Position $60.50 vs. $62.97 target — **$2.47 of headroom, below the $6.30 minimum top-up.** Q2 prints 3 September; that catalyst is still open.
+- **ALAB** (low) — Q2 2026 confirmed: record revenue $392.4M +104% YoY, Q3 guide $540–560M. Position $60.49 vs. $31.49 target — **above target, no top-up.**
+- **CORT** (low) — the thesis's one open question is now **resolved in its favour**: the relacorilant ovarian-cancer NDA was **approved** by the FDA as Lifyorli (relacorilant + nab-paclitaxel). The thesis explicitly refused to infer this from the price move; it was right not to, and right on the substance. (The separate *hypercortisolism* application did get a Complete Response Letter on 2025-12-31 — that is what the May 2026 resubmission answers, and the thesis never claimed otherwise.) Position $103.87 vs. $31.49 target — **3× target, no top-up.**
+
+Prices were also re-checked against Phase A's references from last night: MSFT +0.37%, DELL +2.37%, ALAB +0.19%, CORT −0.90%. No material gap, so no invalidation criteria were re-triggered on price.
+
+---
+
+## Known gaps in this cycle's checks
+- **Account identity was NOT verified.** No IBKR endpoint returns an account identifier. The fingerprint tripwire logged net liquidation $524.76 (inside the $400–900 band) holding ALAB, CORT, DELL, MSFT. That cannot distinguish two accounts of similar size.
+- **The wash-sale guard is incomplete.** The connector sees only the account it is attached to. `YOUR_OTHER_ACCOUNT_ID_HERE` could not be queried — treat it as unchecked, not as clean.
+- The loss limits likewise cover only the connected account.
+
+*`trade_log.jsonl` is the source of truth. If this file and it ever disagree, trust the log.*
