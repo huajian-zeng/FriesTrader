@@ -1,4 +1,4 @@
-# 2026-08-27
+# 2026-08-28
 
 ## ✅ 0 instructions awaiting your approval in IBKR
 
@@ -8,38 +8,39 @@ waiting for a tap, and nothing has executed.
 ## Reconciliation since the last run
 
 Nothing to reconcile. `get_order_instructions` returned an empty queue and every
-`instruction` entry in `trade_log.jsonl` was already resolved on an earlier
-cycle — no approval, no decline and no expiry happened since yesterday.
+`instruction` entry in `trade_log.jsonl` was already resolved on an earlier cycle
+— the last two (the CORT and ALAB top-ups) resolved on 2026-08-24. No approval,
+no decline and no expiry happened since yesterday. `get_account_trades` shows no
+fill since 2026-08-21.
 
-## ⚠ A thesis was dropped on its facts, not its price — CORT
+## ⚠ A thesis was dropped on its facts, not its price — CORT (second cycle running)
 
-Phase A's CORT thesis rests on **"2026 revenue guidance of $900M–$1.0B stands"**
-and on there being *no* company-disclosed catalyst behind the stock's 36% 60-day
-advance. Both are contradicted by Corcept's own Q2 2026 report: guidance was
-**raised to $1.1B–$1.2B** (from $950M–$1,050M) on Q2 revenue of **$256.1M, up
-32%**, including **$47.6M from newly launched LIFYORLI (relacorilant)** — and the
-stock rose roughly 20% on that release. That raise *is* the catalyst the thesis
-says does not exist.
+Phase A's CORT thesis rests on the claim that **"this run's research did not
+identify the catalyst"** for the 30 July session, and that "the move driving the
+position's gain is unconfirmed rather than explained." It is — Corcept disclosed
+Q2 2026 after the close on 29 July: **revenue $256.1M, up 32%** (vs ~$220.1M
+expected), **EPS $0.36** (vs $0.05 expected), **$47.6M from newly launched
+LIFYORLI** in its first quarter of sales, and a **raise of full-year 2026
+guidance to $1.1B–$1.2B**. The stock rose ~27% on 30 July on exactly that. The
+catalyst the thesis says it could not find is a company disclosure.
 
-Also noted, though not the basis for the drop: relacorilant was **approved** as
-Lifyorli for platinum-resistant ovarian cancer on 2026-03-25 and is selling,
-while the thesis reads the disclosed news as uniformly bad on the strength of the
-(real, separate) 2025-12-31 hypercortisolism CRL. That resubmission now carries a
-PDUFA date of **2026-12-17**.
+This is the **same underlying disclosure that invalidated yesterday's CORT
+thesis**, which claimed the older $900M–$1.0B guidance still stood. Two cycles,
+two different wordings, same missed report — worth a look at why Phase A keeps
+losing this one.
 
-This thesis is wrong **in your favour** — Corcept is doing better than Phase A
-believes — and it was dropped anyway. A thesis contradicted on a figure the
-company disclosed is invalid regardless of which way the price moved. The price
-check alone (−0.65%) would have waved it straight through.
+The thesis is wrong **in your favour** again, and it was dropped anyway. A thesis
+contradicted on a company-disclosed figure is invalid regardless of which way the
+price moved; the price check alone (+0.07% against yesterday's close) would have
+waved it straight through.
 
-**This did not sell anything.** The stop-loss and take-profit checks ran first
-and neither triggered. Dropping CORT removed it as a *top-up candidate* only; the
-0.8489-share position is still held and Phase A will re-screen it tonight.
+**This did not sell anything.** The stop-loss and take-profit checks ran first and
+neither triggered. Dropping CORT removed it as a *top-up candidate* only; the
+0.8489-share position is still held.
 
-Sources: [Simply Wall St](https://simplywall.st/stocks/us/pharmaceuticals-biotech/nasdaq-cort/corcept-therapeutics/news/why-corcept-therapeutics-cort-is-up-198-after-boosting-2026)
-· [Corcept IR Q2 2026](https://corcept.gcs-web.com/news-releases/news-release-details/corcept-therapeutics-announces-second-quarter-financial-4)
-· [ChartMill](https://www.chartmill.com/news/CORT/Chartmill-52125-Corcept-Therapeutics-NASDAQCORT-Surges-21-After-Q2-Earnings-Beat-and-Raised-Guidance)
-· [Drugs.com — Lifyorli approval history](https://www.drugs.com/history/lifyorli.html)
+Sources: [Investing.com — Q2 2026 call transcript](https://www.investing.com/news/transcripts/earnings-call-transcript-corcept-therapeutics-q2-2026-revenue-beat-lifts-stock-93CH-4821896)
+· [StocksToTrade — 30 July move on beat + guidance hike](https://stockstotrade.com/news/corcept-therapeutics-incorporated-cort-news-2026_07_30/)
+· [Yahoo Finance — Q2 earnings and revenues surpass estimates](https://ca.finance.yahoo.com/news/corcept-therapeutics-cort-q2-earnings-222507577.html)
 
 ## Loss limits
 
@@ -57,13 +58,14 @@ All quotes live (REALTIME). No stop triggered, no tier fired.
 
 | Symbol | Avg cost | Fresh price | Drawdown | Stop % used | Status |
 |---|---|---|---|---|---|
-| MSFT | $503.62 | $493.57 | 1.99% | 5.00% | holding |
-| CORT | $121.75 | $119.00 | 2.26% | 5.37% | holding |
-| DELL | $497.02 | $464.82 | 6.48% | 11.00% | holding |
-| ALAB | $307.23 | $302.58 | 1.51% | 12.52% | holding |
+| MSFT | $503.62 | $507.00 | — (+0.67% gain) | n/a — gain, stop not computed | holding |
+| CORT | $121.75 | $117.01 | 3.89% | 5.21% | holding |
+| DELL | $497.02 | $474.42 | 4.55% | 11.01% | holding |
+| ALAB | $307.23 | $294.72 | 4.07% | 12.63% | holding |
 
-No take-profit tier has fired on any of these this holding period — all four are
-below cost, so the 15% / 30% / 50% tiers are nowhere near.
+No take-profit tier has fired on any of these this holding period. MSFT is
++0.67% on cost and the other three are below cost, so the 15% / 30% / 50% tiers
+are nowhere near.
 
 > Reminder: there is **no resting stop at the broker**. `create_order_instruction`
 > has no stop order type, so these are evaluated once a day, and even a trigger
@@ -71,32 +73,38 @@ below cost, so the 15% / 30% / 50% tiers are nowhere near.
 
 ## Candidates considered
 
-**6 new entries skipped on capacity** — 4 of 4 concurrent positions already held,
+**3 new entries skipped on capacity** — 4 of 4 concurrent positions already held,
 so `open_slots = 0`. Skipped without a staleness re-check; this is scarcity, not a
 judgment on the theses:
-MRVL (medium), INTC (low), AAOI (low), NBIS (low), AMD (low), LITE (low).
+**NVDA (high)**, LITE (low), MRVL (low). NVDA would have ranked first this cycle
+had a slot been free — worth knowing, since the cap has now blocked new entries
+five sessions running.
 
 **4 top-up candidates evaluated:**
 
 - **CORT** (low) — dropped by the fact check, above.
-- **MSFT** (high) — facts confirmed against the FY26 Q4 print (revenue $90.01B vs
-  $87.62B expected, adj. EPS $4.74 vs $4.24, Azure +43%, Cloud past $100B). No
-  top-up: position $215.00 is already above the $105.04 target for its tier.
-- **DELL** (medium) — facts confirmed against Q1 FY27 (revenue $43.8B +88%, AI
-  server revenue $16.1B, non-GAAP EPS $4.86, record $51.3B AI backlog, FY27
-  guidance raised to $165–169B with ~$60B AI servers). No top-up: only $2.18 of
-  headroom, below the $6.30 minimum.
-  *Correction:* the thesis dates the fiscal Q2 print to 2026-08-28; the scheduled
-  call is the week of 2026-09-01, so that binary catalyst is still ahead of you.
-- **ALAB** (low) — facts confirmed against Q2 2026 (record revenue $392.4M +104%,
-  Q3 guide $540–560M). No top-up: position $64.42 already above the $31.51 target.
+- **MSFT** (high) — facts confirmed against the FQ4 2026 print (revenue $90.0B
+  +18%, diluted EPS $4.81 GAAP / $4.74 non-GAAP, net income $35.8B, Azure past
+  $100B annual). No top-up: position $220.85 is already above the $105.99 target
+  for its tier.
+- **DELL** (medium) — facts confirmed against Q1 FY27 (revenue $43.8B +88%, EPS
+  $4.86 +214%, $16.1B AI server revenue, record $51.3B AI backlog, FY27 guidance
+  $165–169B with ~$60B AI servers). No top-up: only $1.49 of headroom, below the
+  $6.36 minimum. Headroom has shrunk four cycles running ($4.03 → $2.47 → $2.18 →
+  $1.49) — the min-top-up rule working as designed, not a new problem. The next
+  print (week of 2026-09-01) is still ahead of you.
+- **ALAB** (low) — facts confirmed against Q2 2026 (record revenue $392.4M +104%
+  YoY, +27% sequentially; Q3 guided $540–560M, ~40% sequential growth). No
+  top-up: position $62.75 already above the $31.80 target. Price is −3.08% against
+  yesterday's close, inside one 20-day daily standard deviation for this name, so
+  not treated as a gap.
 
 ## Housekeeping
 
-Ran 08:36–08:41 Central, inside the 08:30–15:00 regular-session guard. Account
-identity was **not** verified — no connector endpoint returns one. The fingerprint
-(net liquidation $525.19, 4 positions: ALAB, CORT, DELL, MSFT) is a tripwire only
-and cannot distinguish two accounts of similar size.
+Ran 08:36–08:40 Central on a Friday, inside the 08:30–15:00 regular-session
+guard. Account identity was **not** verified — no connector endpoint returns one.
+The fingerprint (net liquidation $529.95, 4 positions: ALAB, CORT, DELL, MSFT) is
+a tripwire only and cannot distinguish two accounts of similar size.
 
 `trade_log.jsonl` is the source of truth; this file is a convenience view. If the
 two disagree, trust `trade_log.jsonl`.
