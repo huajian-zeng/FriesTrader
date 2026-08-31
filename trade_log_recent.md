@@ -1,110 +1,97 @@
-# 2026-08-28
+# 2026-08-31
 
-## ✅ 0 instructions awaiting your approval in IBKR
+## ⚠ 1 instruction awaiting your approval in IBKR
+Review it at: https://ndcdyn.interactivebrokers.com/sso/resolver?action=ACCT-MGMT-MAIN#/orders/instructions
 
-The IBKR approval queue is empty. Nothing was created this cycle, nothing is
-waiting for a tap, and nothing has executed.
+- **SELL 0.8489 CORT** (stop-loss, 6.63% drawdown vs a 5.37% stop) — expires **2026-09-07**
 
-## Reconciliation since the last run
+Nothing here has executed. This is a draft sitting in IBKR's AI Instructions
+queue; it only becomes a real order when you open the app and tap *Review &
+Submit*. If you leave it, it disappears on its own on 2026-09-07 — and an
+expiry is not a decision, it just means the queue went unread.
 
-Nothing to reconcile. `get_order_instructions` returned an empty queue and every
-`instruction` entry in `trade_log.jsonl` was already resolved on an earlier cycle
-— the last two (the CORT and ALAB top-ups) resolved on 2026-08-24. No approval,
-no decline and no expiry happened since yesterday. `get_account_trades` shows no
-fill since 2026-08-21.
-
-## ⚠ A thesis was dropped on its facts, not its price — CORT (second cycle running)
-
-Phase A's CORT thesis rests on the claim that **"this run's research did not
-identify the catalyst"** for the 30 July session, and that "the move driving the
-position's gain is unconfirmed rather than explained." It is — Corcept disclosed
-Q2 2026 after the close on 29 July: **revenue $256.1M, up 32%** (vs ~$220.1M
-expected), **EPS $0.36** (vs $0.05 expected), **$47.6M from newly launched
-LIFYORLI** in its first quarter of sales, and a **raise of full-year 2026
-guidance to $1.1B–$1.2B**. The stock rose ~27% on 30 July on exactly that. The
-catalyst the thesis says it could not find is a company disclosure.
-
-This is the **same underlying disclosure that invalidated yesterday's CORT
-thesis**, which claimed the older $900M–$1.0B guidance still stood. Two cycles,
-two different wordings, same missed report — worth a look at why Phase A keeps
-losing this one.
-
-The thesis is wrong **in your favour** again, and it was dropped anyway. A thesis
-contradicted on a company-disclosed figure is invalid regardless of which way the
-price moved; the price check alone (+0.07% against yesterday's close) would have
-waved it straight through.
-
-**This did not sell anything.** The stop-loss and take-profit checks ran first and
-neither triggered. Dropping CORT removed it as a *top-up candidate* only; the
-0.8489-share position is still held.
-
-Sources: [Investing.com — Q2 2026 call transcript](https://www.investing.com/news/transcripts/earnings-call-transcript-corcept-therapeutics-q2-2026-revenue-beat-lifts-stock-93CH-4821896)
-· [StocksToTrade — 30 July move on beat + guidance hike](https://stockstotrade.com/news/corcept-therapeutics-incorporated-cort-news-2026_07_30/)
-· [Yahoo Finance — Q2 earnings and revenues surpass estimates](https://ca.finance.yahoo.com/news/corcept-therapeutics-cort-q2-earnings-222507577.html)
+## Resolved from earlier instructions
+Nothing. The queue was empty at the start of the cycle and `get_account_trades`
+(7 days) returned no trades at all, so nothing was approved, declined or
+expired since Friday. Every earlier instruction was already resolved on a
+previous cycle.
 
 ## Loss limits
+No realized P&L today or this week (Monday, so the two are the same figure).
+Daily 0.00% against a 5% limit, weekly 0.00% against 10%. **Entries not
+halted.**
 
-Clear — **$0.00 realized** so far in the current Chicago trading week (week began
-2026-08-24), against a 5% daily / 10% weekly limit on $542.44 starting capital.
-New entries and top-ups are **not** halted.
-
-Partial by construction: this only sees the one account the connector is attached
-to. `YOUR_OTHER_ACCOUNT_ID_HERE` could not be queried and must **not** be read as
-having come back clean.
+Partial by construction: the connector only sees the account it is connected
+to, so realized P&L in any other linked account is invisible to these limits.
 
 ## Held positions — stop-loss / take-profit
 
-All quotes live (REALTIME). No stop triggered, no tier fired.
-
-| Symbol | Avg cost | Fresh price | Drawdown | Stop % used | Status |
+| Symbol | Avg cost | Price now | Drawdown / gain | Stop used | Outcome |
 |---|---|---|---|---|---|
-| MSFT | $503.62 | $507.00 | — (+0.67% gain) | n/a — gain, stop not computed | holding |
-| CORT | $121.75 | $117.01 | 3.89% | 5.21% | holding |
-| DELL | $497.02 | $474.42 | 4.55% | 11.01% | holding |
-| ALAB | $307.23 | $294.72 | 4.07% | 12.63% | holding |
+| **CORT** | 121.75 | 113.67 | **−6.63%** | 5.37% | **STOP TRIGGERED — full-position sell queued** |
+| DELL | 497.02 | 466.46 | −6.15% | 10.84% | holding |
+| ALAB | 307.23 | 295.00 | −3.98% | 12.76% | holding |
+| MSFT | 503.62 | 509.75 | +1.22% | n/a (in gain) | holding |
 
-No take-profit tier has fired on any of these this holding period. MSFT is
-+0.67% on cost and the other three are below cost, so the 15% / 30% / 50% tiers
-are nowhere near.
+No take-profit tier fired anywhere — every position is well below the first
+15% tier.
 
-> Reminder: there is **no resting stop at the broker**. `create_order_instruction`
-> has no stop order type, so these are evaluated once a day, and even a trigger
-> only produces an instruction awaiting your tap.
+Worth remembering: there is **no resting stop at the broker**. The connector
+has no stop order type, so this check runs once a day and even when it fires
+the result is only an instruction waiting for you. A position can gap down at
+10am and stay held until you next open the app.
 
-## Candidates considered
+## Candidates considered (proposals from Phase A, 2026-08-28)
 
-**3 new entries skipped on capacity** — 4 of 4 concurrent positions already held,
-so `open_slots = 0`. Skipped without a staleness re-check; this is scarcity, not a
-judgment on the theses:
-**NVDA (high)**, LITE (low), MRVL (low). NVDA would have ranked first this cycle
-had a slot been free — worth knowing, since the cap has now blocked new entries
-five sessions running.
+Rejected before ranking:
 
-**4 top-up candidates evaluated:**
+- **NBIS** — thesis contradicted by disclosed facts. It treats a *proposed*
+  $4.5B convertible note offering as an open question; Nebius disclosed on
+  2026-08-24 that the offering **closed and was upsized to ~$5.75B**. A
+  completed raise described as pending, and $1.25B larger than the thesis
+  weighed. The price gap alone (−2.1%) would have waved this through.
+- **CORT** — its stop-loss fired this cycle, so it is not eligible for a
+  same-cycle top-up. Queueing a buy next to the sell would be
+  self-contradictory.
+- **COHR** — wash-sale guard: sold at a loss on 2026-08-20, inside the 30-day
+  window. Note its *price-gated* re-entry lock had actually cleared (276.28 is
+  below the 286.25 it was sold at); it was the calendar guard that blocked it.
 
-- **CORT** (low) — dropped by the fact check, above.
-- **MSFT** (high) — facts confirmed against the FQ4 2026 print (revenue $90.0B
-  +18%, diluted EPS $4.81 GAAP / $4.74 non-GAAP, net income $35.8B, Azure past
-  $100B annual). No top-up: position $220.85 is already above the $105.99 target
-  for its tier.
-- **DELL** (medium) — facts confirmed against Q1 FY27 (revenue $43.8B +88%, EPS
-  $4.86 +214%, $16.1B AI server revenue, record $51.3B AI backlog, FY27 guidance
-  $165–169B with ~$60B AI servers). No top-up: only $1.49 of headroom, below the
-  $6.36 minimum. Headroom has shrunk four cycles running ($4.03 → $2.47 → $2.18 →
-  $1.49) — the min-top-up rule working as designed, not a new problem. The next
-  print (week of 2026-09-01) is still ahead of you.
-- **ALAB** (low) — facts confirmed against Q2 2026 (record revenue $392.4M +104%
-  YoY, +27% sequentially; Q3 guided $540–560M, ~40% sequential growth). No
-  top-up: position $62.75 already above the $31.80 target. Price is −3.08% against
-  yesterday's close, inside one 20-day daily standard deviation for this name, so
-  not treated as a gap.
+Rejected by position sizing (in priority order):
 
-## Housekeeping
+- **NVDA** (high) — $105.57 target would leave cash at −$21.55, below the
+  $52.79 cash-buffer floor.
+- **MSFT** (high, top-up) — already above target size ($222.05 vs $105.57).
+- **DELL** (medium, top-up) — headroom of $2.28 is below the $6.33 minimum
+  top-up.
+- **ALAB** (low, top-up) — already above target size ($62.81 vs $31.67).
+- **SPCX, SNDK, MRVL, AMD** (low) — each would leave cash at $52.35, just
+  under the $52.79 buffer floor.
 
-Ran 08:36–08:40 Central on a Friday, inside the 08:30–15:00 regular-session
-guard. Account identity was **not** verified — no connector endpoint returns one.
-The fingerprint (net liquidation $529.95, 4 positions: ALAB, CORT, DELL, MSFT) is
-a tripwire only and cannot distinguish two accounts of similar size.
+**No buy instructions were created this cycle.** Cash is $84.02 against a
+$52.79 minimum buffer, which leaves too little room for even a low-conviction
+entry.
 
-`trade_log.jsonl` is the source of truth; this file is a convenience view. If the
-two disagree, trust `trade_log.jsonl`.
+The 7 `avoid` theses (GLW, RKLB, ASTS, INTC, AAOI, MU, CBRS) were not
+processed further.
+
+## Checks run this cycle
+- Market-hours guard: 08:37 Central on a Monday — inside the 08:30–15:00
+  regular session.
+- Account fingerprint: net liquidation $527.87, inside the [400, 900] band; 4
+  positions (ALAB, CORT, DELL, MSFT). **This is a tripwire, not an account
+  verification** — no connector endpoint returns an account identifier, so
+  which account is connected cannot be confirmed, and this cannot distinguish
+  two accounts of similar size.
+- Every quote used was `REALTIME`. No prior-close fallback was accepted.
+- Monday weekend-gap search plus a disclosed-facts check on all 10 candidates
+  that reached Step 4. MSFT, NVDA, DELL, ALAB, COHR, MRVL, SNDK, SPCX and AMD
+  all had their headline figures confirmed against primary or major-outlet
+  sources; only NBIS failed.
+- **Wash-sale guard is incomplete.** `YOUR_OTHER_ACCOUNT_ID_HERE` is not
+  reachable through this connector and could not be checked. An account that
+  cannot be checked is not an account that came back clean.
+
+---
+`trade_log.jsonl` is the source of truth. This file is a convenience view; if
+the two ever disagree, trust the log.
