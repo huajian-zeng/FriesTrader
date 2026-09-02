@@ -1,129 +1,85 @@
-# 2026-09-01
+# 2026-09-02
 
 ## ⚠ 1 instruction awaiting your approval in IBKR
 Review it at: https://ndcdyn.interactivebrokers.com/sso/resolver?action=ACCT-MGMT-MAIN#/orders/instructions
+- **SELL 0.2129 ALAB** (stop-loss, 10.5% drawdown vs an 8.4% stop) — expires 2026-09-09
 
-- **BUY 0.4782 NVDA** ($215.88 ref, $103.23, high conviction — new entry) — expires **2026-09-08**
+Nothing below has executed. An instruction is a draft that sits in IBKR's AI
+Instructions queue until you open the app and tap *Review & Submit*. Left
+untouched it disappears on its own after 7 days.
 
-Nothing here has executed. This is a draft sitting in IBKR's AI Instructions
-queue; it only becomes a real order when you open the app and tap *Review &
-Submit*. If you leave it, it disappears on its own on 2026-09-08 — and an
-expiry is not a decision, it just means the queue went unread.
+## Resolved since the last cycle
+- **NVDA BUY 0.4782 @ $216.87** — you approved instruction 100 on 2026-09-01
+  and it filled at 13:55:46Z, well before its 2026-09-08 expiry. Commission
+  $1.00. Nothing declined, nothing expired unread — the queue was empty, not
+  ignored.
 
-## ⏰ Time-sensitive, needs your judgement today
+## Loss limits — no halt
+Daily realized $0.00 (0.00%), weekly realized **-$8.36 (-1.54%)** against
+$542.44 starting capital; limits are 5% daily / 10% weekly. One trade in the
+week's bucket (the CORT stop-loss you approved on 2026-08-31). New entries and
+top-ups were **not** halted. Source is `get_account_trades`, so hand-made sells
+count too — but it only ever sees the one account the connector is attached to.
 
-**DELL reports fiscal Q2 2027 after the close today.** That is the exact
-binary catalyst its own thesis names, and the position has **no intraday stop
-protection** — the connector has no stop order type, so nothing rests at the
-broker and the next automated check is tomorrow morning. Whatever the print
-does overnight, this pipeline cannot react to it before then. DELL is already
-the closest of the three holdings to its stop (−9.73% against 10.56%).
+## Held positions
+| Symbol | Qty | Avg cost | Now | Stop % used | Drawdown / gain | Outcome |
+|---|---|---|---|---|---|---|
+| ALAB | 0.2129 | $307.23 | $275.00 | 8.38% | **-10.49%** | **STOP TRIGGERED → sell queued** |
+| DELL | 0.1309 | $497.02 | $459.00 | 10.29% | -7.65% | hold |
+| MSFT | 0.4356 | $503.62 | $496.14 | 5.00% | -1.48% | hold |
+| NVDA | 0.4782 | $218.96 | $219.28 | n/a (gain) | +0.15% | hold |
 
-## Resolved from earlier instructions
+No take-profit tier is anywhere near firing — the first tier is +15% and every
+position is at or below cost. No tier has ever fired on any of these holdings.
 
-**You approved the CORT stop-loss and it filled.** This is the first stop-loss
-this pipeline originated that made it all the way through to a fill.
+**ALAB is the one that needs you.** Its 10.49% drawdown from average cost
+cleared the 8.38% volatility-scaled stop (2.5 × a 3.35% 20-day stdev). The
+sell is a full exit of the position, and it is only a draft — there is no
+resting stop at the broker, so ALAB stays held, gap risk and all, until you
+approve it.
 
-- **SELL 0.8489 CORT** @ $113.03, 2026-08-31 13:44:50Z — commission $0.96,
-  **realized −$8.36** (the broker's own figure, already net of commission)
+## Candidates considered (8 long theses from Phase A)
+Every thesis was re-verified against the company's own disclosures this cycle,
+not just against price. All eight facts checked out — no thesis was
+contradicted. All eight were still rejected on mechanical grounds:
 
-Neither a decline nor an expiry: it was approved well inside its 2026-09-07
-expiry window. The account went from 4 positions to 3. **Not flagged as a wash
-sale** — zero CORT remains held, so there is no replacement position for a
-disallowed loss to attach to. An ordinary closed round-trip.
+- **ALAB** (low, top-up) — rejected: its stop-loss fired this same cycle, so
+  it can't be topped up in the same breath as being sold.
+- **CORT** (medium, new) — rejected: **sell re-entry lock**. Sold at $113.03 on
+  2026-08-31; it's $114.09 now, above that. Independently blocked by the
+  wash-sale guard too (loss sale inside the 30-day window). The FDA approval of
+  Lifyorli and the $950M–$1,050M 2026 guidance both check out — the gate is
+  mechanical, and a good thesis doesn't override one.
+- **LITE** (high, new) — rejected: a $103.20 entry would leave cash at -$28.90,
+  under the $51.60 (10%) buffer. The Aug 12 beat-and-raise verified ($1.01B rev
+  vs $987.7M est, $3.23 adj EPS, Q1 guide $1.225–1.275B).
+- **DELL** (high, top-up) — rejected: $43.12 of headroom, but the buy would
+  leave $31.18 cash, under the $51.60 buffer. The Sept 1 print verified: record
+  $47.0B revenue, $7.04 adj EPS, FY27 raised $25B to $192B and EPS to $25.50.
+- **MSFT** (high, top-up) — rejected: already $216.12 vs a $103.20 target, over
+  size by $112.92. FQ4 verified (Azure +43%, $4.74 vs $4.24 est).
+- **NVDA** (high, top-up) — rejected: $104.86 vs a $103.20 target, already at
+  size. FQ2 beat and the AWS 2-million-GPU/Vera commitment verified.
+- **AAOI** (low, new) — rejected: cash buffer. Q2 verified ($191.9M rev +86%,
+  $0.06 EPS, Q3 guide $255–290M).
+- **AMD** (low, new) — rejected: cash buffer. Data center +107% verified; the
+  160M-share OpenAI warrant is real and dates to October 2025.
 
-## Loss limits
-Daily $0.00 (0.00% against a 5% limit). Weekly −$8.36, or **−1.54% against a
-10% limit** — the CORT sell is the only realized trade this Chicago week.
-**Entries not halted.**
+**The binding constraint this cycle was cash, not conviction.** $74.30 of cash
+against a $51.60 minimum buffer leaves $22.70 to spend — less than any
+candidate's size. If the ALAB sell is approved it frees roughly $58, which
+would change that picture next cycle.
 
-Partial by construction: the connector only sees the account it is connected
-to, so realized P&L in any other linked account is invisible to these limits.
+## Caveats that apply every cycle
+- The account itself **cannot be verified**. No connector endpoint returns an
+  account identifier. The fingerprint (net liq $516, inside the $400–900 band;
+  4 positions: ALAB, DELL, MSFT, NVDA) is a tripwire, not a guarantee — it
+  can't tell two accounts of similar size apart.
+- The **wash-sale guard is incomplete**. `YOUR_OTHER_ACCOUNT_ID_HERE` is not
+  reachable through this connector and was not checked. An account that can't
+  be checked is not one that came back clean.
+- **No intraday stop protection.** Stops are evaluated once a day, here, and
+  the result is a draft awaiting your tap.
 
-## Held positions — stop-loss / take-profit
-
-| Symbol | Avg cost | Price now | Drawdown / gain | Stop used | Outcome |
-|---|---|---|---|---|---|
-| DELL | 497.02 | 448.68 | −9.73% | 10.56% | holding — **closest to its stop; reports tonight** |
-| ALAB | 307.23 | 283.33 | −7.78% | 12.54% | holding |
-| MSFT | 503.62 | 502.30 | −0.26% | 5.00% (min clamp) | holding |
-
-No take-profit tier fired anywhere — all three positions are below cost, so
-the first 15% tier is not in reach. No tier has ever fired on any of them, so
-each stop is measured from average cost rather than a trailing high.
-
-Worth remembering: there is **no resting stop at the broker**. This check runs
-once a day and even when it fires the result is only an instruction waiting
-for you.
-
-## Candidates considered (proposals from Phase A, 2026-08-31)
-
-**Approved — 1:**
-
-- **NVDA** (high conviction, new entry) — took the single open slot at
-  $103.23. Fiscal Q2 2027 confirmed: revenue $96.2B (+106% y/y, ahead of the
-  ~$92B consensus), Data Center $89.0B (+117%), non-GAAP EPS $2.22, gross
-  margin 75.0%, and a $108B fiscal Q3 guide. Leaves cash at $75.77 against a
-  $51.62 buffer floor.
-
-**Rejected by a mechanical gate, not by quality:**
-
-- **CORT** — **sell re-entry lock.** Today's $113.98 is *above* the $113.03 it
-  stopped out at yesterday, so buying back now would be averaging up straight
-  after stopping out. The wash-sale guard would have blocked it independently.
-  Worth saying plainly: **today's CORT thesis is factually correct** — the
-  $256.1M Q2 print and the raise to $1.1–1.2B both check out, unlike the two
-  versions dropped last week. It is the rule rejecting it, not the research.
-- **COHR** — **wash-sale guard**: sold at a loss on 2026-08-20, inside the
-  30-day window. Its price-gated re-entry lock had actually *cleared* ($267.60
-  is below the $286.25 it was sold at); the calendar guard is what blocked it.
-- **SNDK** — **failed the fact check.** The thesis rests on the claim that no
-  company-disclosed print could be confirmed and that "the print is
-  unconfirmed." SanDisk reported fiscal Q4 2026 on 2026-08-05: **$8.965B
-  quarterly revenue (+372% y/y)**, $20.25B for the full year, non-GAAP EPS
-  $39.25. The error runs *in the account's favour* and the price check
-  (−0.93%) would have waved it through — dropped anyway, because direction of
-  error and direction of price are both irrelevant. Two other signs Phase A's
-  data on this name was shaky: the thesis reports three mutually inconsistent
-  share prices for the same date, and calls a Mizuho move a *trim* when its
-  own cited source headlines it as a *raise*.
-
-**Rejected by position sizing (in priority order):**
-
-- **MSFT** (high, top-up) — already far above target ($218.80 vs $103.24).
-- **DELL** (medium, top-up) — $3.22 of headroom, below the $6.19 minimum
-  top-up.
-- **ALAB** (low, top-up) — already above target ($60.32 vs $30.97).
-- **LITE, MRVL** (low) — the concurrency cap and the 10% cash buffer, once
-  NVDA took the last slot.
-
-The 7 `avoid` theses (RKLB, ASTS, INTC, GLW, SPCX, AAOI, CBRS) were not
-processed further.
-
-## Standing flag (not acted on)
-
-**MSFT is $218.80, or 42.4% of net liquidation, against a 20% cap** — the
-legacy of the 2026-08-14 duplicate fill. No mechanical rule forces a trim, so
-nothing was sold; the sizing script simply refuses to add to it. This one is
-yours to decide.
-
-## Checks run this cycle
-- Market-hours guard: 08:36 Central on a Tuesday — inside the 08:30–15:00
-  regular session.
-- Account fingerprint: net liquidation $516.21, inside the [400, 900] band; 3
-  positions (ALAB, DELL, MSFT). **This is a tripwire, not an account
-  verification** — no connector endpoint returns an account identifier, so
-  which account is connected cannot be confirmed, and this cannot distinguish
-  two accounts of similar size.
-- Every quote used was `REALTIME`. No prior-close fallback was accepted.
-- Disclosed-facts check on all 9 non-avoid candidates. MSFT, NVDA, DELL, ALAB,
-  CORT, LITE, COHR and MRVL were all confirmed against company releases or
-  major outlets; only SNDK failed. Tuesday, so no weekend-gap search was
-  required.
-- **Wash-sale guard is incomplete.** `YOUR_OTHER_ACCOUNT_ID_HERE` is not
-  reachable through this connector and could not be checked. An account that
-  cannot be checked is not an account that came back clean.
-
----
-`trade_log.jsonl` is the source of truth. This file is a convenience view; if
-the two ever disagree, trust the log.
+*`trade_log.jsonl` is the source of truth. If this file and it ever disagree,
+trust `trade_log.jsonl`.*
