@@ -1,4 +1,4 @@
-# 2026-09-04
+# 2026-09-07
 
 ## ✅ 0 instructions awaiting your approval in IBKR
 
@@ -6,93 +6,118 @@ The queue is empty. Nothing was created this cycle and nothing is waiting on
 a tap. **Nothing in this pipeline has executed on its own** — every order
 still requires you to open the IBKR app and tap *Review & Submit*.
 
-## Resolved since yesterday — you approved both, and both filled
+## ⚠ The market was closed today — this cycle ran blind
 
-Yesterday's two instructions are gone from the queue and matching fills came
-back from the broker. Neither was declined and neither expired unread.
+**2026-09-07 is Labor Day.** US equity markets were shut, and the pipeline
+should not have been evaluating anything.
 
-- **BUY 0.083 DELL** (top-up) — filled 2026-09-03 14:16:46Z at **$497.50**,
-  commission $0.41. Position is now 0.2139 shares.
-- **BUY 0.0206 SNDK** (new entry) — filled 2026-09-03 14:16:40Z at
-  **$1,521.98**, commission $0.31. New position opened.
+The market-hours guard checks the clock and the weekday only — 08:40 Central
+on a Monday is inside the 08:30–15:00 window, so it passed and the run
+continued. **It has no holiday calendar.** This is the same class of failure
+the guard was written to catch on the daylight-saving/cron drift: a run that
+reads as clean while the pipeline is actually blind.
 
-Both are buys, so no wash-sale flag applies to either.
+What actually caught it, one layer later, was the non-live-quote fail-safe.
+Every symbol polled came back `top-status: FROZEN`, with **no bid/ask at all**
+on repeat polls, and every last-trade timestamp was Friday 2026-09-04 18:59
+Central. `get_price_snapshot`'s `open` field still showed Friday's opens.
 
-## Loss limits — clear, entries not halted
+Frozen Friday prices were **not** substituted for live ones anywhere:
+`stop_loss.py` and `take_profit.py` were deliberately not run rather than fed
+stale data, which would have produced real-looking decisions from a dead tape.
+
+**Suggested fix:** add a market-holiday check alongside the clock check in
+Step 0's guard, so this halts up front instead of relying on the quote
+fail-safe.
+
+## ⚠ No stop-loss or take-profit was evaluated on any position
+
+All four holdings went unchecked today, and **there is no resting stop at the
+broker** — this is a once-a-day evaluation and it did not happen. The last
+one was 2026-09-04.
+
+| Symbol | Qty | Avg cost | Stop | Take-profit |
+|---|---|---|---|---|
+| DELL | 0.2139 | $499.14 | not evaluated — no live quote | not evaluated |
+| MSFT | 0.4356 | $503.62 | not evaluated — no live quote | not evaluated |
+| NVDA | 0.4782 | $218.96 | not evaluated — no live quote | not evaluated |
+| SNDK | 0.0206 | $1,537.20 | not evaluated — no live quote | not evaluated |
+
+No tier was consumed by this no-op — none is recorded as fired. Verify these
+manually if you want a read before the next cycle.
+
+## Nothing resolved since Friday
+
+The queue was empty and no instruction was outstanding. The last two (DELL
+and SNDK buys, created 2026-09-03) were already resolved as approved fills on
+the 2026-09-04 cycle. **Nothing was declined and nothing expired** — an empty
+queue with nothing outstanding is not a human decision.
+
+## Loss limits — clear on their own terms
 
 | | Realized | Limit | |
 |---|---|---|---|
 | Today | $0.00 (0.00%) | −5% | ✅ |
-| This week | −$17.18 (−3.17%) | −10% | ✅ |
+| This week | $0.00 (0.00%) | −10% | ✅ |
 
-Sourced from the broker's own `get_account_trades`, so hand-made sells in
-the IBKR app count too. Week starts 2026-08-31 Central. Two losses in the
-window: ALAB −$8.82 (09-02) and CORT −$8.36 (08-31).
+This check needs no quote, so it ran normally. Today is Monday, so the weekly
+window opens today and last week's losses (ALAB −$8.82 on 09-02, CORT −$8.36
+on 08-31) correctly drop out.
 
-## Held positions — all four holding, nothing triggered
+Entries were still halted this cycle — not by these limits, but by the
+fail-safe on the unevaluable stop-loss and take-profit checks.
 
-Every position is showing a gain on average cost, so no stop was computed
-(a non-positive drawdown can never meet a positive stop threshold) and no
-take-profit tier is close to the 15% first rung. No tier has ever fired on
-any of these holdings.
+## Candidates — 14 considered, 0 approved, 0 queued
 
-| Symbol | Qty | Avg cost | Fresh price | Gain | Stop | Take-profit |
-|---|---|---|---|---|---|---|
-| DELL | 0.2139 | $499.14 | $526.92 | +5.57% | not computed (gain) | hold |
-| MSFT | 0.4356 | $503.62 | $506.14 | +0.50% | not computed (gain) | hold |
-| NVDA | 0.4782 | $218.96 | $233.08 | +6.45% | not computed (gain) | hold |
-| SNDK | 0.0206 | $1,537.20 | $1,642.00 | +6.82% | not computed (gain) | hold |
+**All four slots are full** (DELL, MSFT, NVDA, SNDK against a max of 4) and
+the queue held no pending buy, so `open_slots = 0`.
 
-All quotes REALTIME. Remember there is **no resting stop at the broker** —
-this is a once-a-day check, and even a triggered stop only becomes an
-instruction awaiting your tap.
+Rejected for no open slots — scarcity, not a verdict on the thesis. Skipped
+without a staleness or fact check:
 
-## Candidates — 12 considered, 0 approved
+- SNOW, ALAB, CORT, GLW, COHR, AAOI, AMD, CBRS, MRVL (low), LITE (medium)
 
-**All four slots are full** (DELL, MSFT, NVDA, SNDK against a max of 4), so
-no new entry could be approved at all this cycle.
+ALAB, CORT and COHR would *also* have been blocked by the wash-sale guard —
+each has a loss sale inside the 30-day window — and each still carries an
+unresolved sell re-entry lock that could not be priced today.
 
-Rejected for no open slots — scarcity, not a verdict on the thesis. These
-were skipped without a staleness re-check or a fact check:
+Top-ups considered — all four **passed** the Monday weekend-gap search and
+the fact check, then were dropped for want of a live price:
 
-- SNOW (high), CORT (medium), ALAB, COHR, AAOI, AMD, MRVL, LITE (low)
+- **DELL** (high) — Q2 FY27 confirmed: $47.0B revenue (+58%), $60.9B AI
+  orders, $95.0B backlog, FY27 guidance **raised** $25B to ~$192B and adjusted
+  EPS to $25.50. A raise called a raise. *One open item:* the thesis cites
+  non-GAAP EPS $7.04 (+203%); Yahoo/Motley Fool report $6.34 (+273%). The
+  thesis already flagged the GAAP line as unconfirmed, so this looks like a
+  basis difference rather than a misstatement — worth settling against Dell's
+  own release next cycle. The quarter's direction is unaffected.
+- **MSFT** (high) — the 2026-09-02 Azure disclosure stands: $29.4B for the
+  quarter, $101.9B for the year, commercial RPO $678B (+84%). Weekend items
+  were routine Azure product updates, nothing bearing on the thesis.
+- **NVDA** (high) — Hugging Face confirmed by NVIDIA's newsroom and an SEC
+  filing at $12.93B; definitive agreement 2026-09-02, announced 09-03 (the
+  thesis's date is the announcement — a refinement, not a contradiction). The
+  Commerce inquiry into offshore compute rental is still an examination with
+  no scheduled action, so that invalidation trigger has not fired.
+- **SNDK** (low) — $14B buyback, investor-day targets and the ~$0.29/GB floor
+  all confirmed; no invalidation trigger fired. Sources note a ~7% five-day
+  decline, consistent with the thesis's own account of a violently
+  range-bound stock. Watch item, not a contradiction.
 
-Top-ups considered and rejected — each position is already at or above the
-target size for its conviction tier:
-
-- **MSFT** $220.47 held vs $106.80 target (−$113.67 headroom)
-- **DELL** $112.71 held vs $106.80 target (−$5.91)
-- **NVDA** $111.46 held vs $32.04 target (−$79.42)
-- **SNDK** $33.83 held vs $32.04 target (−$1.79)
-
-All four theses were re-verified against disclosed facts before sizing, and
-all four passed:
-
-- **DELL** — Q2 FY2027 confirmed: $47.0B revenue (+58%), non-GAAP EPS $7.04
-  (+203%), $95.0B AI backlog, FY27 guidance **raised** $25B to $192.0B. A
-  raise called a raise.
-- **MSFT** — FY Q4 2026 confirmed: Microsoft Cloud $59.3B (+27%), Azure past
-  $100B, Copilot above 30M paid seats.
-- **SNDK** — 2026-08-13 investor day confirmed, including the ~80% non-GAAP
-  gross margin target. Gapped +5.6% overnight; the gap traces to continued
-  NAND shortage pricing and the $31B Sandisk/Kioxia Japan expansion, both of
-  which support the thesis rather than invalidate it.
-- **NVDA** — FY2026 confirmed: $215.9B revenue (+65%), Data Center
-  networking +142%. The thesis honestly declines to characterise the
-  2026-08-26 quarter, which remains unverified — an open item on this
-  position.
+Three `avoid` candidates (RKLB, ASTS, INTC) were not processed further.
 
 ## Known gaps in today's checks
 
-- **The account itself cannot be verified.** No connector endpoint returns
-  an account identifier. Net liquidation of $534 sits inside the expected
-  [$400, $900] band and 4 positions were found, so the tripwire did not
-  fire — but a tripwire cannot distinguish two accounts of similar size.
+- **The market was closed and the guard did not know it** — see above. The
+  single most important thing on this page.
+- **The account itself cannot be verified.** No connector endpoint returns an
+  account identifier. Net liquidation of $532.61 sits inside the expected
+  [$400, $900] band with 4 positions found, so the tripwire did not fire — but
+  a tripwire cannot distinguish two accounts of similar size.
 - **The wash-sale guard is incomplete.** Linked account
   `YOUR_OTHER_ACCOUNT_ID_HERE` is unreachable through this connector and was
   not checked. An account that cannot be checked is not an account that came
-  back clean. It blocked nothing this cycle in any case — none of the four
-  evaluated buy candidates had a loss sale in the window.
+  back clean. It blocked nothing this cycle in any case.
 
 ---
 
